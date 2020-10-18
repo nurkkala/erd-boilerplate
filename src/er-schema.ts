@@ -298,9 +298,9 @@ export class ERSchema {
   }
 }
 
-export function loadSchema(name: string) {
+export function loadSchema(path: string) {
   const plainObject = JSON.parse(
-    readFileSync(join(__dirname, "..", name), "utf-8")
+    readFileSync(path, "utf-8")
   );
   const schema = plainToClass(ERSchema, plainObject);
   schema.inflections = new InflectionTable(schema.entity.name);
