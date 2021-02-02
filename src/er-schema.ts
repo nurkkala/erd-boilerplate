@@ -1,7 +1,6 @@
 import { plainToClass, Type } from "class-transformer";
 import { InflectionTable, lowerFirst } from "./helpers";
 import { readFileSync } from "fs";
-import { join } from "path";
 
 type AttributeType =
   | "string"

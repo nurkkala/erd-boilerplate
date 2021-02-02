@@ -108,7 +108,7 @@ function main(schemaName: string) {
   banner("create-update");
   console.log(renderTemplate("create-update", schema.inflections));
 
-  banner("crud");
+  banner("graphql");
   console.log(renderTemplate("crud", schema.inflections));
 }
 
