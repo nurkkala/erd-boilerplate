@@ -3,7 +3,7 @@ import pluralize from "pluralize";
 
 export function lowerFirst(s: string) {
   invariant(s.length > 0, "string is empty");
-  return s.replace(/^\w/, c => c.toLowerCase());
+  return s.replace(/^\w/, (c) => c.toLowerCase());
 }
 
 export class InflectionTable {
@@ -25,3 +25,6 @@ export class InflectionTable {
     this.entityAllUpperPlural = this.entityLowerPlural.toUpperCase();
   }
 }
+
+// Credits:
+// https://joshtronic.com/2016/02/14/how-to-capitalize-the-first-letter-in-a-string-in-javascript/

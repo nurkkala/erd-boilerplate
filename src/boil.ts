@@ -6,10 +6,35 @@ import Handlebars from "handlebars";
 import figlet from "figlet";
 import { ERSchema, loadSchema } from "./er-schema";
 import pluralize from "pluralize";
-import program from "commander";
+import { Command } from "commander";
 import { sync } from "walkdir/walkdir";
 
 type TemplateFunctionMap = Map<string, HandlebarsTemplateDelegate>;
+
+const program = new Command();
+
+program
+  .usage("[options] schemaFileName")
+  .option("-e --entity", "generate entity")
+  .option("-m --module", "generate module")
+  .option("-r --resolver", "generate resolver")
+  .option("-s --service", "generate service")
+  .option("-a --all", "generate all")
+  .option("-v --verbose", "be verbose");
+
+program.parse();
+
+const templateMap: TemplateFunctionMap = new Map();
+const options = program.opts();
+if (options.verbose) {
+  console.log("OPTIONS", options);
+}
+
+if (program.args.length === 1) {
+  main(program.args[0]);
+} else {
+  program.help();
+}
 
 function registerHelpers() {
   Handlebars.registerHelper("lower", (str: string) => str.toLowerCase());
@@ -20,8 +45,6 @@ function banner(text: string) {
   console.log(figlet.textSync(text));
 }
 
-const templateMap: TemplateFunctionMap = new Map();
-
 function loadTemplates() {
   for (const path of sync("templates")) {
     if (path.endsWith(".hbs")) {
@@ -29,13 +52,13 @@ function loadTemplates() {
       const key = pathInfo.name.replace(/\..*/, "");
       const template = readFileSync(path, "utf-8");
       const templateFunction = Handlebars.compile(template, {
-        noEscape: true
+        noEscape: true,
       });
       templateMap.set(key, templateFunction);
     }
   }
 
-  if (program.verbose) {
+  if (options.verbose) {
     banner("templates");
     templateMap.forEach((value, key) => console.log(key));
   }
@@ -52,8 +75,8 @@ function renderTemplate(templateKey: string, context: object) {
 
 function generateEntity(schema: ERSchema) {
   return renderTemplate("entity", {
-    entityName: schema.entity.name,
-    ...schema.declareFields()
+    entity: schema.entity,
+    ...schema.declareFields(),
   });
 }
 
@@ -63,41 +86,41 @@ function main(schemaName: string) {
 
   const schema = loadSchema(schemaName);
 
-  if (program.verbose) {
+  if (options.verbose) {
     banner(schema.inflections.entityLower);
     console.log(JSON.stringify(schema, null, 2));
     banner("inflections");
     console.log(JSON.stringify(schema.inflections, null, 2));
   }
 
-  if (program.entity || program.all) {
+  if (options.entity || options.all) {
     banner("entity");
     console.log(generateEntity(schema));
   }
 
-  if (program.module || program.all) {
+  if (options.module || options.all) {
     banner("module");
     console.log(
       renderTemplate("module", { entityName: schema.inflections.entityUpper })
     );
   }
 
-  if (program.resolver || program.all) {
+  if (options.resolver || options.all) {
     banner("resolver");
     console.log(
       renderTemplate("resolver", {
         entityName: schema.inflections.entityUpper,
-        entityNamePlural: schema.inflections.entityUpperPlural
+        entityNamePlural: schema.inflections.entityUpperPlural,
       })
     );
   }
 
-  if (program.service || program.all) {
+  if (options.service || options.all) {
     banner("service");
     console.log(
       renderTemplate("service", {
         entityName: schema.inflections.entityUpper,
-        entityNamePlural: schema.inflections.entityUpperPlural
+        entityNamePlural: schema.inflections.entityUpperPlural,
       })
     );
   }
@@ -110,20 +133,4 @@ function main(schemaName: string) {
 
   banner("graphql");
   console.log(renderTemplate("crud", schema.inflections));
-}
-
-program
-  .usage("[options] schemaFileName")
-  .option("-e --entity", "generate entity")
-  .option("-m --module", "generate module")
-  .option("-r --resolver", "generate resolver")
-  .option("-s --service", "generate service")
-  .option("-a --all", "generate all")
-  .option("-v --verbose", "be verbose")
-  .parse(process.argv);
-
-if (program.args.length === 1) {
-  main(program.args[0]);
-} else {
-  program.help();
 }

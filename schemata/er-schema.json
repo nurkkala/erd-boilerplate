@@ -7,12 +7,15 @@
   "properties": {
     "entity": {
       "type": "object",
-      "required": ["name", "pk"],
+      "required": ["name", "pk", "description"],
       "properties": {
         "name": {
           "type": "string"
         },
         "pk": {
+          "type": "string"
+        },
+        "description": {
           "type": "string"
         },
         "attributes": {

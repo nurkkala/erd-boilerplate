@@ -1,18 +1,18 @@
-import {Column,Entity,JoinTable,ManyToMany,OneToMany,PrimaryGeneratedColumn} from "typeorm";
-import { Field, InputType, Int, ObjectType } from "type-graphql";
+import { Column,Entity,JoinTable,ManyToMany,OneToMany,PrimaryGeneratedColumn } from "typeorm";
+import { Field, InputType, Int, ObjectType } from "@nestjs/graphql";
 
 @Entity()
-@ObjectType()
-export class {{ entityName }} {
+@ObjectType({ description: "{{ entity.description }}" })
+export class {{ entity.name }} {
   {{ objectFields }}
 }
 
 @InputType()
-export class {{ entityName }}CreateInput {
+export class {{ entity.name }}CreateInput {
   {{ inputFields }}
 }
 
 @InputType()
-export class {{ entityName }}UpdateInput {
+export class {{ entity.name }}UpdateInput {
   {{ updateFields }}
 }

@@ -22,7 +22,7 @@ type RelationshipType =
 export enum OpType {
   OBJECT,
   CREATE,
-  UPDATE
+  UPDATE,
 }
 
 function joinOptions(options: string[]) {
@@ -151,14 +151,15 @@ export class Attribute {
     return [
       this.gqlField(opType),
       this.dbColumn(opType),
-      this.typeDeclaration(opType)
+      this.typeDeclaration(opType),
     ].join(" ");
   }
 }
 
 export class Entity {
-  name: string = "";
-  pk: string = "";
+  name = "";
+  pk = "";
+  description = "";
   @Type(() => Attribute)
   attributes: Attribute[] = [];
 }
@@ -260,8 +261,10 @@ export class Relationship {
 export class ERSchema {
   @Type(() => Entity)
   entity: Entity = {} as Entity;
+
   @Type(() => Relationship)
   relationships: Relationship[] = [];
+
   inflections: InflectionTable = {} as InflectionTable;
 
   declareFields() {
@@ -292,19 +295,14 @@ export class ERSchema {
     return {
       objectFields: objectFields.join(JOIN_STRING),
       inputFields: createFields.join(JOIN_STRING),
-      updateFields: updateFields.join(JOIN_STRING)
+      updateFields: updateFields.join(JOIN_STRING),
     };
   }
 }
 
 export function loadSchema(path: string) {
-  const plainObject = JSON.parse(
-    readFileSync(path, "utf-8")
-  );
+  const plainObject = JSON.parse(readFileSync(path, "utf-8"));
   const schema = plainToClass(ERSchema, plainObject);
   schema.inflections = new InflectionTable(schema.entity.name);
   return schema;
 }
-
-// Credits:
-// https://joshtronic.com/2016/02/14/how-to-capitalize-the-first-letter-in-a-string-in-javascript/
