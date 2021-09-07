@@ -2,22 +2,27 @@ import { plainToClass, Type } from "class-transformer";
 import { InflectionTable, lowerFirst } from "./helpers";
 import { readFileSync } from "fs";
 
-type AttributeType =
-  | "string"
-  | "text"
-  | "boolean"
-  | "integer"
-  | "float"
-  | "created"
-  | "updated"
-  | null;
+enum ScalarType {
+  String = "string",
+  Text = "text",
+  Boolean = "boolean",
+  Integer = "integer",
+  Float = "float",
+}
 
-type RelationshipType =
-  | "oneToMany"
-  | "manyToOne"
-  | "manyToMany"
-  | "manyToManyOwner"
-  | null;
+enum SpecialType {
+  Created = "created",
+  Updated = "updated",
+}
+
+type AttributeType = ScalarType | SpecialType;
+
+enum RelationshipType {
+  OneToMany = "oneToMany",
+  ManyToOne = "manyToOne",
+  ManyToMany = "manyToMany",
+  ManyToManyOwner = "manyToManyOwner",
+}
 
 export enum OpType {
   OBJECT,
@@ -25,7 +30,10 @@ export enum OpType {
   UPDATE,
 }
 
-function joinOptions(options: string[]) {
+const JOIN_SINGLE_SPACE = "\n  ";
+const JOIN_DOUBLE_SPACE = "\n\n  ";
+
+function joinOptionsAsHash(options: string[]) {
   let allOptions = options.join(", ");
   if (allOptions) {
     allOptions = `{ ${allOptions} }`;
@@ -33,9 +41,10 @@ function joinOptions(options: string[]) {
   return allOptions;
 }
 
+// An attribute of an entity.
 export class Attribute {
   name: string = "";
-  type: AttributeType = null;
+  type: AttributeType | null = null;
   description: string = "";
   unique: boolean = false;
   isDbColumn: boolean = true;
@@ -44,49 +53,68 @@ export class Attribute {
   forGqlUpdate: boolean = true;
   nullable: boolean = false; // Default for both TypeORM and TypeGraphQL
 
-  private gqlField(opType: OpType) {
-    if (!this.isGqlField) {
-      return "";
+  // Can this attribute be implemented with a @FieldColumn decorator?
+  private canBeFieldColumn(): boolean {
+    if (this.type) {
+      return Object.values(ScalarType).includes(this.type as ScalarType);
+    } else {
+      return false;
     }
+  }
 
-    let gqlType: string | null = null;
+  private getGraphQLType(): string | null {
     switch (this.type) {
-      case "string":
-      case "text":
-      case "boolean":
-      case "created":
-      case "updated":
-        // NOP
-        break;
-      case "integer":
-        gqlType = "() => Int";
-        break;
-      case "float":
-        gqlType = "() => Float";
-        break;
+      case ScalarType.String:
+      case ScalarType.Text:
+      case ScalarType.Boolean:
+        // Decorator will infer type from TypeScript declaration
+        return null;
+      case SpecialType.Created:
+      case SpecialType.Updated:
+        // Special cases
+        return null;
+      case ScalarType.Integer:
+        return "() => Int";
+      case ScalarType.Float:
+        return "() => Float";
       default:
         throw Error(`Bogus type '${this.type}'`);
     }
-
-    const advancedOptions = [`description: "${this.description}"`];
-    if (opType === OpType.UPDATE || this.nullable) {
-      advancedOptions.push("nullable: true");
-    }
-
-    const allOptions = [joinOptions(advancedOptions)];
-    if (gqlType) {
-      allOptions.unshift(gqlType);
-    }
-
-    return `@Field(${allOptions.join(", ")})`;
   }
 
-  private dbColumn(opType: OpType) {
+  private createFieldColumnDecorator(opType: OpType) {
+    const options = [`description: "${this.description}"`];
+    if (opType === OpType.UPDATE || this.nullable) {
+      options.push("nullable: true");
+    }
+    if (this.unique) {
+      options.push("unique: true");
+    }
+    const gqlType = this.getGraphQLType();
+    if (gqlType) {
+      options.unshift(gqlType);
+    }
+    return `@FieldColumn(${joinOptionsAsHash(options)})`;
+  }
+
+  private createFieldDecorator(opType: OpType) {
+    const options = [`description: "${this.description}"`];
+    if (opType === OpType.UPDATE || this.nullable) {
+      options.push("nullable: true");
+    }
+    const gqlType = this.getGraphQLType();
+    if (gqlType) {
+      options.unshift(gqlType);
+    }
+    return `@Field(${joinOptionsAsHash(options)})`;
+  }
+
+  private createColumnDecorator(opType: OpType) {
     if (!this.isDbColumn || opType !== OpType.OBJECT) {
       return "";
     }
 
-    const options: string[] = [];
+    const options = [`comment: "${this.description}"`];
     if (this.nullable) {
       options.push("nullable: true");
     }
@@ -95,51 +123,52 @@ export class Attribute {
     }
 
     switch (this.type) {
-      case "created":
+      case SpecialType.Created:
         return "@CreateDateColumn()";
-      case "updated":
+      case SpecialType.Updated:
         return "@UpdateDataColumn()";
-      case "text":
+      case ScalarType.Text:
         options.push('type: "text"');
         break;
-      case "string":
-      case "boolean":
+      case ScalarType.String:
+      case ScalarType.Boolean:
         // TypeORM infers correct type from the declaration.
         break;
       default:
         throw Error(`Bogus type '${this.type}'`);
     }
 
-    return `@Column(${joinOptions(options)})`;
+    return `@Column(${joinOptionsAsHash(options)})`;
   }
 
-  private typeDeclaration(opType: OpType) {
+  private createTypeScriptDeclaration(opType: OpType) {
     const optional = opType === OpType.UPDATE ? "?" : "";
 
     let tsType = "";
     switch (this.type) {
-      case "created":
-      case "updated":
+      case SpecialType.Created:
+      case SpecialType.Updated:
         tsType = "Date";
         break;
-      case "text":
+      case ScalarType.Text:
+      case ScalarType.String:
         tsType = "string";
         break;
-      case "integer":
-      case "float":
+      case ScalarType.Integer:
+      case ScalarType.Float:
         tsType = "number";
         break;
-      case "string":
-      case "boolean":
-        tsType = this.type;
+      case ScalarType.Boolean:
+        tsType = "boolean";
         break;
       default:
         throw Error(`Bogus type '${this.type}'`);
     }
 
-    return `${this.name}${optional}: ${tsType}`;
+    return `${this.name}${optional}: ${tsType};`;
   }
 
+  // Return all the decorators for this attribute.
   public decorators(opType: OpType) {
     if (
       (opType === OpType.CREATE && !this.forGqlCreate) ||
@@ -148,14 +177,24 @@ export class Attribute {
       return "";
     }
 
-    return [
-      this.gqlField(opType),
-      this.dbColumn(opType),
-      this.typeDeclaration(opType),
-    ].join(" ");
+    const rtn = [];
+    if (this.canBeFieldColumn() && this.isGqlField) {
+      rtn.push(this.createFieldColumnDecorator(opType));
+    } else {
+      if (this.isGqlField) {
+        rtn.push(this.createFieldDecorator(opType));
+      }
+      if (opType === OpType.OBJECT) {
+        rtn.push(this.createColumnDecorator(opType));
+      }
+    }
+    rtn.push(this.createTypeScriptDeclaration(opType));
+
+    return rtn.join(JOIN_SINGLE_SPACE);
   }
 }
 
+// An ERD entity.
 export class Entity {
   name = "";
   pk = "";
@@ -164,100 +203,90 @@ export class Entity {
   attributes: Attribute[] = [];
 }
 
+// An ERD relationship.
 export class Relationship {
   name: string = "";
-  type: RelationshipType = null;
+  type: RelationshipType | null = null;
   to: string = "";
   nullable: boolean = true; // Default for TypeORM
   description: string = "";
 
-  private relationId() {
-    const columnName = lowerFirst(this.name) + "Id";
-
-    // This only belongs on side of the relationship where the FK lives.
+  private createGraphQLDecorator() {
     switch (this.type) {
-      case "manyToOne":
-        return `@Column("integer") ${columnName}: number`;
-      case "manyToManyOwner": // Maybe for this also?
-      case "oneToMany":
-      case "manyToMany":
-        return null;
-    }
-  }
-
-  private gqlField() {
-    switch (this.type) {
-      case "manyToOne":
+      case RelationshipType.ManyToOne:
         return `@Field(() => ${this.to})`;
-      case "oneToMany":
-      case "manyToMany":
-      case "manyToManyOwner":
+      case RelationshipType.OneToMany:
+      case RelationshipType.ManyToMany:
+      case RelationshipType.ManyToManyOwner:
         return `@Field(() => [${this.to}])`;
     }
   }
 
-  private dbRelation() {
+  private createTypeOrmDecorator() {
     switch (this.type) {
-      case "oneToMany":
+      case RelationshipType.OneToMany:
         return "@OneToMany";
-      case "manyToOne":
+      case RelationshipType.ManyToOne:
         return "@ManyToOne";
-      case "manyToMany":
-      case "manyToManyOwner":
+      case RelationshipType.ManyToMany:
+      case RelationshipType.ManyToManyOwner:
         return "@ManyToMany";
     }
   }
 
-  private inverseSide(inflections: InflectionTable) {
+  private createInverseRelationDecorator(inflections: InflectionTable) {
     const toLower = lowerFirst(this.to);
 
     switch (this.type) {
-      case "oneToMany":
+      case RelationshipType.OneToMany:
         return `${toLower} => ${toLower}.${inflections.entityLower}`;
-      case "manyToOne":
-      case "manyToMany":
-      case "manyToManyOwner":
+      case RelationshipType.ManyToOne:
+      case RelationshipType.ManyToMany:
+      case RelationshipType.ManyToManyOwner:
         return `${toLower} => ${toLower}.${inflections.entityLowerPlural}`;
     }
   }
 
-  private typeDeclaration() {
+  private createTypeScriptDeclaration() {
     switch (this.type) {
-      case "oneToMany":
-      case "manyToMany":
-      case "manyToManyOwner":
+      case RelationshipType.OneToMany:
+      case RelationshipType.ManyToMany:
+      case RelationshipType.ManyToManyOwner:
         return `${this.name}: ${this.to}[]`;
-      case "manyToOne":
+      case RelationshipType.ManyToOne:
         return `${this.name}: ${this.to}`;
     }
   }
 
+  // Assemble all decorators for this relationship.
   public decorators(inflections: InflectionTable) {
-    const name = this.dbRelation();
+    const name = this.createTypeOrmDecorator();
 
-    const allArgs = [`() => ${this.to}`, this.inverseSide(inflections)];
+    const allArgs = [
+      `() => ${this.to}`,
+      this.createInverseRelationDecorator(inflections),
+    ];
     if (!this.nullable) {
       // Only if not the default.
       allArgs.push("{ nullable: false }");
     }
 
-    const options = [this.gqlField(), `${name}(${allArgs.join(", ")})`];
+    const options = [
+      this.createGraphQLDecorator(),
+      `${name}(${allArgs.join(", ")})`,
+    ];
 
-    if (this.type === "manyToManyOwner") {
+    if (this.type === RelationshipType.ManyToManyOwner) {
       options.push("@JoinTable()");
     }
 
-    options.push(this.typeDeclaration() + ";");
+    options.push(this.createTypeScriptDeclaration() + ";");
 
-    const relationId = this.relationId();
-    if (relationId) {
-      options.push(relationId + ";");
-    }
-
-    return options.join("\n  ");
+    return options.join(JOIN_SINGLE_SPACE);
   }
 }
 
+// The ERD itself.
 export class ERSchema {
   @Type(() => Entity)
   entity: Entity = {} as Entity;
@@ -274,9 +303,17 @@ export class ERSchema {
 
     // Primary key
     objectFields.push(
-      `@Field(() => Int) @PrimaryGeneratedColumn() ${this.entity.pk}: number`
+      [
+        "@Field(() => Int)",
+        "@PrimaryGeneratedColumn()",
+        `${this.entity.pk}: number;`,
+      ].join(JOIN_SINGLE_SPACE)
     );
-    updateFields.push(`@Field(() => Int) ${this.entity.pk}: number`);
+    updateFields.push(
+      ["@Field(() => Int)", `${this.entity.pk}: number;`].join(
+        JOIN_SINGLE_SPACE
+      )
+    );
 
     // Other attributes
     for (const attr of this.entity.attributes) {
@@ -290,12 +327,10 @@ export class ERSchema {
       objectFields.push(rel.decorators(this.inflections));
     }
 
-    const JOIN_STRING = ";\n\n  ";
-
     return {
-      objectFields: objectFields.join(JOIN_STRING),
-      inputFields: createFields.join(JOIN_STRING),
-      updateFields: updateFields.join(JOIN_STRING),
+      objectFields: objectFields.join(JOIN_DOUBLE_SPACE),
+      inputFields: createFields.join(JOIN_DOUBLE_SPACE),
+      updateFields: updateFields.join(JOIN_DOUBLE_SPACE),
     };
   }
 }

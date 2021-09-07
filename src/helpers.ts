@@ -1,11 +1,13 @@
 import invariant from "invariant";
 import pluralize from "pluralize";
 
+// Lower-case the first letter of `s`.
 export function lowerFirst(s: string) {
   invariant(s.length > 0, "string is empty");
   return s.replace(/^\w/, (c) => c.toLowerCase());
 }
 
+// Create various inflections of an entity name.
 export class InflectionTable {
   entityUpper: string;
   entityLower: string;

@@ -12,8 +12,10 @@ import Debug from "debug";
 
 const debug = Debug("boil");
 
+// Map a string to its corresponding Handlebars template.
 type TemplateFunctionMap = Map<string, HandlebarsTemplateDelegate>;
 
+// Create a figlet-based banner.
 class Banner {
   private readonly visible: boolean;
 
@@ -28,6 +30,7 @@ class Banner {
   }
 }
 
+// Encapsulate the templating engine and its templates.
 class TemplateEngine {
   private readonly templateMap: TemplateFunctionMap;
 
@@ -74,6 +77,7 @@ class TemplateEngine {
   }
 }
 
+// The main class to generate boilerplate output.
 class Boiler {
   private readonly schema: ERSchema;
 
@@ -177,6 +181,7 @@ program
   .option("-c --create-update", "generate Vue create-update")
   .option("-a --all", "generate all")
   .option("-v --verbose", "be verbose")
+  .description("generate boilerplate from an ERD file")
   .action((schemaFile: string, options) => {
     debug("schemaFile %O, options %O", schemaFile, options);
     const banner = new Banner();
