@@ -8,11 +8,15 @@ enum ScalarType {
   Boolean = "boolean",
   Integer = "integer",
   Float = "float",
+  Date = "date",
+  Time = "time",
+  DateTime = "datetime",
 }
 
 enum SpecialType {
   Created = "created",
   Updated = "updated",
+  Json = "json",
 }
 
 type AttributeType = ScalarType | SpecialType;
@@ -69,21 +73,26 @@ export class Attribute {
       case ScalarType.Boolean:
         // Decorator will infer type from TypeScript declaration
         return null;
-      case SpecialType.Created:
-      case SpecialType.Updated:
-        // Special cases
-        return null;
       case ScalarType.Integer:
         return "() => Int";
       case ScalarType.Float:
         return "() => Float";
+      case ScalarType.Date:
+      case ScalarType.Time:
+      case ScalarType.DateTime:
+        return "Date";
+      case SpecialType.Created:
+      case SpecialType.Updated:
+      case SpecialType.Json:
+        // Special cases
+        return null;
       default:
         throw Error(`Bogus type '${this.type}'`);
     }
   }
 
   private createFieldColumnDecorator(opType: OpType) {
-    const options = [`description: "${this.description}"`];
+    const options = [];
     if (opType === OpType.UPDATE || this.nullable) {
       options.push("nullable: true");
     }
@@ -94,7 +103,13 @@ export class Attribute {
     if (gqlType) {
       options.unshift(gqlType);
     }
-    return `@FieldColumn(${joinOptionsAsHash(options)})`;
+
+    const fieldColumnArgs = [`"${this.description}"`];
+    if (options.length) {
+      fieldColumnArgs.push(joinOptionsAsHash(options));
+    }
+
+    return `@FieldColumn(${fieldColumnArgs.join(", ")})`;
   }
 
   private createFieldDecorator(opType: OpType) {
@@ -130,8 +145,14 @@ export class Attribute {
       case ScalarType.Text:
         options.push('type: "text"');
         break;
+      case ScalarType.Date:
+      case ScalarType.Time:
+      case ScalarType.DateTime:
+        options.push('type: "Date"');
+        break;
       case ScalarType.String:
       case ScalarType.Boolean:
+      case SpecialType.Json:
         // TypeORM infers correct type from the declaration.
         break;
       default:
@@ -148,7 +169,13 @@ export class Attribute {
     switch (this.type) {
       case SpecialType.Created:
       case SpecialType.Updated:
+      case ScalarType.Date:
+      case ScalarType.Time:
+      case ScalarType.DateTime:
         tsType = "Date";
+        break;
+      case SpecialType.Json:
+        tsType = "Object";
         break;
       case ScalarType.Text:
       case ScalarType.String:
@@ -304,15 +331,16 @@ export class ERSchema {
     // Primary key
     objectFields.push(
       [
-        "@Field(() => Int)",
-        "@PrimaryGeneratedColumn()",
+        "@Field(() => Int, { description: 'Primary key' })",
+        "@PrimaryGeneratedColumn({ comment: 'Primary key' })",
         `${this.entity.pk}: number;`,
       ].join(JOIN_SINGLE_SPACE)
     );
     updateFields.push(
-      ["@Field(() => Int)", `${this.entity.pk}: number;`].join(
-        JOIN_SINGLE_SPACE
-      )
+      [
+        "@Field(() => Int, { description: 'Primary key' })",
+        `${this.entity.pk}: number;`,
+      ].join(JOIN_SINGLE_SPACE)
     );
 
     // Other attributes

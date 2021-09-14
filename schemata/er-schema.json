@@ -6,19 +6,25 @@
   "required": ["entity"],
   "properties": {
     "entity": {
+      "description": "Details of an entity",
       "type": "object",
       "required": ["name", "pk", "description"],
       "properties": {
         "name": {
-          "type": "string"
+          "description": "Entity name (e.g., `CourseOffering`)",
+          "type": "string",
+          "pattern": "^[A-Z][A-Za-z]*$"
         },
         "pk": {
+          "description": "Name of entity's primary key (e.g., `id`)",
           "type": "string"
         },
         "description": {
+          "description": "Description of this entity",
           "type": "string"
         },
         "attributes": {
+          "description": "Attributes for this entity",
           "type": "array",
           "items": {
             "type": "object",
@@ -26,9 +32,11 @@
             "additionalProperties": false,
             "properties": {
               "name": {
+                "description": "Property name",
                 "type": "string"
               },
               "type": {
+                "description": "Property type",
                 "type": "string",
                 "enum": [
                   "string",
@@ -36,29 +44,40 @@
                   "boolean",
                   "integer",
                   "float",
+                  "date",
+                  "time",
+                  "datetime",
+                  "json",
                   "created",
                   "updated"
                 ]
               },
               "description": {
+                "description": "Property description",
                 "type": "string"
               },
               "unique": {
+                "description": "Require unique values for this property?",
                 "type": "boolean"
               },
               "isDbColumn": {
+                "description": "Persist this property in the database?",
                 "type": "boolean"
               },
               "isGqlField": {
+                "description": "Make this property a GraphQL field?",
                 "type": "boolean"
               },
               "forGqlCreate": {
+                "description": "Use this property for GraphQL 'create' operation?",
                 "type": "boolean"
               },
               "forGqlUpdate": {
+                "description": "Use this property for GraphQL 'update' operation?",
                 "type": "boolean"
               },
               "nullable": {
+                "description": "Is this property nullable?",
                 "type": "boolean"
               }
             }
@@ -73,19 +92,24 @@
         "required": ["name", "to", "type", "description"],
         "properties": {
           "name": {
+            "description": "Name of this relationship (e.g., `courses`)",
             "type": "string"
           },
           "to": {
+            "description": "Name of the related entity",
             "type": "string"
           },
           "type": {
+            "description": "Type of relationship",
             "type": "string",
             "enum": ["oneToMany", "manyToOne", "manyToMany", "manyToManyOwner"]
           },
           "nullable": {
+            "description": "Is this relationship nullable (optional)?",
             "type": "boolean"
           },
           "description": {
+            "description": "Description of this relationship",
             "type": "string"
           }
         }

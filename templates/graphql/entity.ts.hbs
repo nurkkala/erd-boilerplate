@@ -1,5 +1,6 @@
 import { Column, Entity, JoinTable, ManyToMany, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { Field, InputType, Int, ObjectType } from "@nestjs/graphql";
+import { FieldColumn } from 'src/decorators';
 
 @Entity()
 @ObjectType({ description: "{{ entity.description }}" })
