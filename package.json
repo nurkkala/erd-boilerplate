@@ -7,10 +7,15 @@
     "email": "tnurkkala@cse.taylor.edu"
   },
   "scripts": {
-    "boil": "ts-node src/boil.ts"
+    "clean": "rimraf ./dist",
+    "copy-assets": "copyfiles ./templates/**/*.hbs ./dist",
+    "build": "yarn clean && tsc && yarn copy-assets"
+  },
+  "main": "dist/boil.js",
+  "bin": {
+    "boil": "bin/index.js"
   },
   "dependencies": {
-    "@caporal/core": "^2.0.2",
     "class-transformer": "^0.4.0",
     "commander": "^8.1.0",
     "debug": "^4.3.2",
@@ -29,7 +34,9 @@
     "@types/lodash": "^4.14.172",
     "@types/node": "^16.7.10",
     "@types/pluralize": "^0.0.29",
+    "copyfiles": "^2.4.1",
     "prettier": "^2.3.2",
+    "rimraf": "^3.0.2",
     "ts-node": "^10.2.1",
     "typescript": "^4.4.2"
   }

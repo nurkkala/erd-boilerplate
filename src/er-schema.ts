@@ -2,6 +2,10 @@ import { plainToClass, Type } from "class-transformer";
 import { InflectionTable, lowerFirst } from "./helpers";
 import { readFileSync } from "fs";
 
+/**
+ * We enumerate scalar types separately in order to be able to use `FieldColumn`
+ * where appropriate.
+ */
 enum ScalarType {
   String = "string",
   Text = "text",

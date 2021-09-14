@@ -96,8 +96,9 @@
             "type": "string"
           },
           "to": {
-            "description": "Name of the related entity",
-            "type": "string"
+            "description": "Name of the related entity (e.g., `Term`)",
+            "type": "string",
+            "pattern": "^[A-Z][A-Za-z]*$"
           },
           "type": {
             "description": "Type of relationship",

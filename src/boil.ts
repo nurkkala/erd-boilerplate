@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import "reflect-metadata";
 
 import { readFileSync } from "fs";
@@ -8,6 +10,7 @@ import { ERSchema, loadSchema } from "./er-schema";
 import pluralize from "pluralize";
 import { Command } from "commander";
 import { sync } from "walkdir/walkdir";
+import { join } from "path";
 import Debug from "debug";
 
 const debug = Debug("boil");
@@ -49,7 +52,8 @@ class TemplateEngine {
   }
 
   private loadTemplates() {
-    for (const path of sync("templates")) {
+    const templateDir = join(__dirname, "templates");
+    for (const path of sync(templateDir)) {
       if (path.endsWith(".hbs")) {
         const pathInfo = parse(path);
         const key = pathInfo.name.replace(/\..*/, "");
