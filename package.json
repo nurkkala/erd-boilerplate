@@ -9,7 +9,9 @@
   "scripts": {
     "clean": "rimraf ./dist",
     "copy-assets": "copyfiles ./templates/**/*.hbs ./dist",
-    "build": "yarn clean && tsc && yarn copy-assets"
+    "build": "yarn clean && tsc && yarn copy-assets",
+    "watch": "yarn clean && yarn copy-assets && tsc --watch",
+    "dev": "yarn ts-node ./src/boil.ts"
   },
   "main": "dist/boil.js",
   "bin": {
@@ -17,7 +19,7 @@
   },
   "dependencies": {
     "class-transformer": "^0.4.0",
-    "commander": "^8.1.0",
+    "commander": "^8.2.0",
     "debug": "^4.3.2",
     "figlet": "^1.5.2",
     "handlebars": "^4.7.7",
@@ -31,13 +33,13 @@
     "@types/debug": "^4.1.7",
     "@types/figlet": "^1.5.4",
     "@types/invariant": "^2.2.35",
-    "@types/lodash": "^4.14.172",
-    "@types/node": "^16.7.10",
+    "@types/lodash": "^4.14.173",
+    "@types/node": "^16.9.2",
     "@types/pluralize": "^0.0.29",
     "copyfiles": "^2.4.1",
-    "prettier": "^2.3.2",
+    "prettier": "^2.4.1",
     "rimraf": "^3.0.2",
     "ts-node": "^10.2.1",
-    "typescript": "^4.4.2"
+    "typescript": "^4.4.3"
   }
 }

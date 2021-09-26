@@ -1,16 +1,17 @@
 #!/usr/bin/env node
 
-import "reflect-metadata";
+import "reflect-metadata"; // Required by class-transformer.
 
 import { readFileSync } from "fs";
 import { parse } from "path";
 import Handlebars from "handlebars";
 import figlet from "figlet";
-import { ERSchema, loadSchema } from "./er-schema";
+import { Schema, loadSchema } from "./schema";
 import pluralize from "pluralize";
 import { Command } from "commander";
 import { sync } from "walkdir/walkdir";
 import { join } from "path";
+import * as _ from "lodash";
 import Debug from "debug";
 
 const debug = Debug("boil");
@@ -20,9 +21,9 @@ type TemplateFunctionMap = Map<string, HandlebarsTemplateDelegate>;
 
 // Create a figlet-based banner.
 class Banner {
-  private readonly visible: boolean;
+  private visible = false;
 
-  constructor(visible = true) {
+  setVisibility(visible: boolean) {
     this.visible = visible;
   }
 
@@ -37,10 +38,7 @@ class Banner {
 class TemplateEngine {
   private readonly templateMap: TemplateFunctionMap;
 
-  constructor(
-    private readonly verbose: boolean,
-    private readonly banner: Banner
-  ) {
+  constructor() {
     this.templateMap = new Map();
     this.registerHelpers();
     this.loadTemplates();
@@ -65,10 +63,7 @@ class TemplateEngine {
       }
     }
 
-    if (this.verbose) {
-      this.banner.show("templates");
-      this.templateMap.forEach((value, key) => console.log(key));
-    }
+    debug("templates %O", this.templateMap.keys());
   }
 
   render(templateKey: string, context: any) {
@@ -81,9 +76,27 @@ class TemplateEngine {
   }
 }
 
+type Options = { [key: string]: boolean };
+type JumpTableEntry = [
+  string, // Name of entry
+  () => void, // Function itself
+  boolean // Whether this is a generator function or not
+];
+
 // The main class to generate boilerplate output.
 class Boiler {
-  private readonly schema: ERSchema;
+  private readonly schema: Schema;
+
+  private jumpTable: JumpTableEntry[] = [
+    ["verbose", this.showDetails, false],
+    ["entity", this.generateEntity, true],
+    ["module", this.generateModule, true],
+    ["service", this.generateService, true],
+    ["resolver", this.generateResolver, true],
+    ["graphql", this.generateGraphQL, true],
+    ["table", this.generateTable, true],
+    ["createUpdate", this.generateCreateUpdate, true],
+  ];
 
   constructor(
     schemaName: string,
@@ -93,42 +106,45 @@ class Boiler {
     this.schema = loadSchema(schemaName);
   }
 
-  boil(options: { [key: string]: string }) {
-    const jumpTable: [string, Function][] = [
-      ["verbose", this.showDetails],
-      ["entity", this.generateEntity],
-      ["module", this.generateModule],
-      ["service", this.generateService],
-      ["resolver", this.generateResolver],
-      ["graphql", this.generateGraphQL],
-      ["table", this.generateTable],
-      ["createUpdate", this.generateCreateUpdate],
-    ];
-    for (let [opt, func] of jumpTable) {
+  countGenerateOptions(options: Options) {
+    return _.filter(
+      this.jumpTable,
+      ([name, _func, gen]) => gen && options.hasOwnProperty(name)
+    ).length;
+  }
+
+  boil(options: Options, banner: Banner) {
+    if (Object.keys(options).length === 0 && !options.all) {
+      console.error("No 'generate' option(s) supplied");
+      process.exit(1);
+    }
+    banner.setVisibility(
+      options.verbose ||
+        options.banner ||
+        this.countGenerateOptions(options) > 1
+    );
+    for (let [opt, func] of this.jumpTable) {
       if (options[opt] || options.all) {
         func.call(this);
       }
     }
   }
 
-  generateEntity() {
+  private showDetails() {
+    this.banner.show(this.schema.inflections.entityLower);
+    console.log(JSON.stringify(this.schema, null, 2));
+  }
+
+  private generateEntity() {
     this.banner.show("entity");
     console.log(
       this.engine.render("entity", {
-        entity: this.schema.entity,
         ...this.schema.declareFields(),
       })
     );
   }
 
-  showDetails() {
-    this.banner.show(this.schema.inflections.entityLower);
-    console.log(JSON.stringify(this.schema, null, 2));
-    this.banner.show("inflections");
-    console.log(JSON.stringify(this.schema.inflections, null, 2));
-  }
-
-  generateModule() {
+  private generateModule() {
     this.banner.show("module");
     console.log(
       this.engine.render("module", {
@@ -137,7 +153,7 @@ class Boiler {
     );
   }
 
-  generateResolver() {
+  private generateResolver() {
     this.banner.show("resolver");
     console.log(
       this.engine.render("resolver", {
@@ -147,7 +163,7 @@ class Boiler {
     );
   }
 
-  generateService() {
+  private generateService() {
     this.banner.show("service");
     console.log(
       this.engine.render("service", {
@@ -157,17 +173,17 @@ class Boiler {
     );
   }
 
-  generateTable() {
+  private generateTable() {
     this.banner.show("table");
     console.log(this.engine.render("table", this.schema.inflections));
   }
 
-  generateCreateUpdate() {
+  private generateCreateUpdate() {
     this.banner.show("create-update");
     console.log(this.engine.render("create-update", this.schema.inflections));
   }
 
-  generateGraphQL() {
+  private generateGraphQL() {
     this.banner.show("graphql");
     console.log(this.engine.render("crud", this.schema.inflections));
   }
@@ -184,14 +200,15 @@ program
   .option("-t --table", "generate Vue table")
   .option("-c --create-update", "generate Vue create-update")
   .option("-a --all", "generate all")
+  .option("-b --banner", "show banner before each section")
   .option("-v --verbose", "be verbose")
   .description("generate boilerplate from an ERD file")
-  .action((schemaFile: string, options) => {
+  .action((schemaFile: string, options: Options) => {
     debug("schemaFile %O, options %O", schemaFile, options);
     const banner = new Banner();
-    const engine = new TemplateEngine(program.opts().verbose, banner);
+    const engine = new TemplateEngine();
     const boiler = new Boiler(schemaFile, engine, banner);
-    boiler.boil(options);
+    boiler.boil(options, banner);
   });
 
 program.parse();

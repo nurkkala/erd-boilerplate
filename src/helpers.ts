@@ -28,5 +28,14 @@ export class InflectionTable {
   }
 }
 
+export function union<T>(setA: Set<T>, setB: Set<T>) {
+  let _union = new Set<T>(setA)
+  for (let elem of setB) {
+    _union.add(elem)
+  }
+  return _union
+}
+
 // Credits:
 // https://joshtronic.com/2016/02/14/how-to-capitalize-the-first-letter-in-a-string-in-javascript/
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set

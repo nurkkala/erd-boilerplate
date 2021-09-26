@@ -1,6 +1,10 @@
 import { plainToClass, Type } from "class-transformer";
 import { InflectionTable, lowerFirst } from "./helpers";
 import { readFileSync } from "fs";
+import * as _ from "lodash";
+
+import Debug from "debug";
+const debug = Debug("boil");
 
 /**
  * We enumerate scalar types separately in order to be able to use `FieldColumn`
@@ -41,7 +45,11 @@ export enum OpType {
 const JOIN_SINGLE_SPACE = "\n  ";
 const JOIN_DOUBLE_SPACE = "\n\n  ";
 
-function joinOptionsAsHash(options: string[]) {
+/**
+ * Join together `options` as values in a JavaScript object.
+ * @param options
+ */
+function joinOptionsAsObject(options: string[]) {
   let allOptions = options.join(", ");
   if (allOptions) {
     allOptions = `{ ${allOptions} }`;
@@ -49,19 +57,68 @@ function joinOptionsAsHash(options: string[]) {
   return allOptions;
 }
 
-// An attribute of an entity.
-export class Attribute {
-  name: string = "";
-  type: AttributeType | null = null;
-  description: string = "";
-  unique: boolean = false;
-  isDbColumn: boolean = true;
-  isGqlField: boolean = true;
-  forGqlCreate: boolean = true;
-  forGqlUpdate: boolean = true;
-  nullable: boolean = false; // Default for both TypeORM and TypeGraphQL
+enum ImportType {
+  TypeOrm = "typeOrm",
+  GraphQl = "graphQl",
+  Entities = "entities",
+  Decorators = "decorators",
+}
 
-  // Can this attribute be implemented with a @FieldColumn decorator?
+/**
+ * Container class for tracking global imports of various flavors.
+ * Globals are justified here because imports are added from a bunch
+ * of different places in the following code, and this seems cleaner
+ * than passing an argument around everywhere. Plus, the global
+ * yuckiness is confined to just this one class.
+ *
+ * An alternative would be to implement dependency injection on
+ * this class, perhaps using `typedi`, which is from the same
+ * developer as `class-transformer`.
+ */
+class GlobalImports {
+  private allTypes: { [key: string]: Set<string> } = {};
+
+  constructor() {
+    for (const importType of Object.values(ImportType)) {
+      debug("IMPORT TYPE %O", importType);
+      this.allTypes[importType] = new Set<string>();
+    }
+  }
+
+  add(importType: ImportType, value: string) {
+    debug("add(%O, '%s')", importType, value);
+    this.allTypes[importType].add(value);
+  }
+
+  forTemplate() {
+    const result: { [key: string]: string } = {};
+    for (const importType of Object.values(ImportType)) {
+      result[importType] = Array.from(this.allTypes[importType]).join(", ");
+    }
+    return result;
+  }
+}
+const globalImports = new GlobalImports();
+debug("GLOBAL IMPORTS %O", globalImports);
+
+/**
+ * An attribute in an entity.
+ */
+class Attribute {
+  private name: string = "";
+  private type: AttributeType | null = null;
+  private description: string = "";
+  private unique: boolean = false;
+  private isDbColumn: boolean = true;
+  private isGqlField: boolean = true;
+  private forGqlCreate: boolean = true;
+  private forGqlUpdate: boolean = true;
+  private nullable: boolean = false; // Default for both TypeORM and TypeGraphQL
+
+  /**
+   * Can this attribute be implemented with a @FieldColumn decorator, or must
+   * it be separate @Field and @Column?
+   */
   private canBeFieldColumn(): boolean {
     if (this.type) {
       return Object.values(ScalarType).includes(this.type as ScalarType);
@@ -70,25 +127,31 @@ export class Attribute {
     }
   }
 
+  /**
+   * Return the GraphQL type for this attribute.
+   * @private
+   */
   private getGraphQLType(): string | null {
     switch (this.type) {
       case ScalarType.String:
       case ScalarType.Text:
       case ScalarType.Boolean:
-        // Decorator will infer type from TypeScript declaration
-        return null;
-      case ScalarType.Integer:
-        return "() => Int";
-      case ScalarType.Float:
-        return "() => Float";
       case ScalarType.Date:
       case ScalarType.Time:
       case ScalarType.DateTime:
-        return "Date";
+        // Decorator will infer type from TypeScript declaration
+        return null;
+      case ScalarType.Integer:
+        globalImports.add(ImportType.GraphQl, "Int");
+        return "() => Int";
+      case ScalarType.Float:
+        globalImports.add(ImportType.GraphQl, "Float");
+        return "() => Float";
       case SpecialType.Created:
       case SpecialType.Updated:
       case SpecialType.Json:
-        // Special cases
+        // Special cases that will be handed elsewhere (e.g., `Created` will end
+        // up decorated as a `@CreateDateColumn`.
         return null;
       default:
         throw Error(`Bogus type '${this.type}'`);
@@ -103,16 +166,16 @@ export class Attribute {
     if (this.unique) {
       options.push("unique: true");
     }
-    const gqlType = this.getGraphQLType();
-    if (gqlType) {
-      options.unshift(gqlType);
-    }
 
     const fieldColumnArgs = [`"${this.description}"`];
-    if (options.length) {
-      fieldColumnArgs.push(joinOptionsAsHash(options));
+    const gqlType = this.getGraphQLType();
+    if (gqlType) {
+      fieldColumnArgs.push(gqlType);
     }
-
+    if (options.length) {
+      fieldColumnArgs.push(joinOptionsAsObject(options));
+    }
+    globalImports.add(ImportType.Decorators, "FieldColumn");
     return `@FieldColumn(${fieldColumnArgs.join(", ")})`;
   }
 
@@ -125,7 +188,8 @@ export class Attribute {
     if (gqlType) {
       options.unshift(gqlType);
     }
-    return `@Field(${joinOptionsAsHash(options)})`;
+    globalImports.add(ImportType.GraphQl, "Field");
+    return `@Field(${joinOptionsAsObject(options)})`;
   }
 
   private createColumnDecorator(opType: OpType) {
@@ -143,9 +207,11 @@ export class Attribute {
 
     switch (this.type) {
       case SpecialType.Created:
+        globalImports.add(ImportType.TypeOrm, "CreateDateColumn");
         return "@CreateDateColumn()";
       case SpecialType.Updated:
-        return "@UpdateDataColumn()";
+        globalImports.add(ImportType.TypeOrm, "UpdateDateColumn");
+        return "@UpdateDateColumn()";
       case ScalarType.Text:
         options.push('type: "text"');
         break;
@@ -163,7 +229,8 @@ export class Attribute {
         throw Error(`Bogus type '${this.type}'`);
     }
 
-    return `@Column(${joinOptionsAsHash(options)})`;
+    globalImports.add(ImportType.TypeOrm, "Column");
+    return `@Column(${joinOptionsAsObject(options)})`;
   }
 
   private createTypeScriptDeclaration(opType: OpType) {
@@ -226,23 +293,48 @@ export class Attribute {
 }
 
 // An ERD entity.
-export class Entity {
+class Entity {
   name = "";
-  pk = "";
   description = "";
-  @Type(() => Attribute)
-  attributes: Attribute[] = [];
+  private pk = "";
+  @Type(() => Attribute) attributes: Attribute[] = [];
+
+  public primaryKey(opType: OpType) {
+    globalImports.add(ImportType.TypeOrm, "Entity");
+    globalImports.add(ImportType.GraphQl, "ObjectType");
+    globalImports.add(ImportType.GraphQl, "InputType");
+    globalImports.add(ImportType.GraphQl, "Field");
+    globalImports.add(ImportType.GraphQl, "Int");
+    const lines = ["@Field(() => Int, { description: 'Primary key' })"];
+
+    switch (opType) {
+      case OpType.OBJECT:
+        globalImports.add(ImportType.TypeOrm, "PrimaryGeneratedColumn");
+        lines.push("@PrimaryGeneratedColumn({ comment: 'Primary key' })");
+        break;
+      case OpType.CREATE:
+        throw Error("Create operation has no primary key");
+      case OpType.UPDATE:
+        // NOP
+        break;
+    }
+
+    lines.push(`${this.pk}: number;`);
+    return lines.join(JOIN_SINGLE_SPACE);
+  }
 }
 
 // An ERD relationship.
-export class Relationship {
-  name: string = "";
-  type: RelationshipType | null = null;
-  to: string = "";
-  nullable: boolean = true; // Default for TypeORM
+class Relationship {
+  private name: string = "";
+  private type: RelationshipType | null = null;
+  private to: string = "";
+  private nullable: boolean = true; // Default for TypeORM
   description: string = "";
 
   private createGraphQLDecorator() {
+    globalImports.add(ImportType.GraphQl, "Field");
+    globalImports.add(ImportType.Entities, this.to);
     switch (this.type) {
       case RelationshipType.ManyToOne:
         return `@Field(() => ${this.to})`;
@@ -256,11 +348,14 @@ export class Relationship {
   private createTypeOrmDecorator() {
     switch (this.type) {
       case RelationshipType.OneToMany:
+        globalImports.add(ImportType.TypeOrm, "OneToMany");
         return "@OneToMany";
       case RelationshipType.ManyToOne:
+        globalImports.add(ImportType.TypeOrm, "ManyToOne");
         return "@ManyToOne";
       case RelationshipType.ManyToMany:
       case RelationshipType.ManyToManyOwner:
+        globalImports.add(ImportType.TypeOrm, "ManyToMany");
         return "@ManyToMany";
     }
   }
@@ -308,6 +403,7 @@ export class Relationship {
     ];
 
     if (this.type === RelationshipType.ManyToManyOwner) {
+      globalImports.add(ImportType.TypeOrm, "JoinTable");
       options.push("@JoinTable()");
     }
 
@@ -318,14 +414,14 @@ export class Relationship {
 }
 
 // The ERD itself.
-export class ERSchema {
-  @Type(() => Entity)
-  entity: Entity = {} as Entity;
-
-  @Type(() => Relationship)
-  relationships: Relationship[] = [];
-
+export class Schema {
   inflections: InflectionTable = {} as InflectionTable;
+  @Type(() => Entity) entity: Entity = {} as Entity;
+  @Type(() => Relationship) relationships: Relationship[] = [];
+
+  postTransform() {
+    this.inflections = new InflectionTable(this.entity.name);
+  }
 
   declareFields() {
     const objectFields: string[] = [];
@@ -333,19 +429,8 @@ export class ERSchema {
     const updateFields: string[] = [];
 
     // Primary key
-    objectFields.push(
-      [
-        "@Field(() => Int, { description: 'Primary key' })",
-        "@PrimaryGeneratedColumn({ comment: 'Primary key' })",
-        `${this.entity.pk}: number;`,
-      ].join(JOIN_SINGLE_SPACE)
-    );
-    updateFields.push(
-      [
-        "@Field(() => Int, { description: 'Primary key' })",
-        `${this.entity.pk}: number;`,
-      ].join(JOIN_SINGLE_SPACE)
-    );
+    objectFields.push(this.entity.primaryKey(OpType.OBJECT));
+    updateFields.push(this.entity.primaryKey(OpType.UPDATE));
 
     // Other attributes
     for (const attr of this.entity.attributes) {
@@ -359,17 +444,26 @@ export class ERSchema {
       objectFields.push(rel.decorators(this.inflections));
     }
 
-    return {
+    const context = {
+      globalImports: globalImports.forTemplate(),
+      entity: this.entity,
       objectFields: objectFields.join(JOIN_DOUBLE_SPACE),
       inputFields: createFields.join(JOIN_DOUBLE_SPACE),
       updateFields: updateFields.join(JOIN_DOUBLE_SPACE),
     };
+    debug("Context %O", context);
+    return context;
   }
 }
 
+/**
+ * Load the ER schema file for a particular entity.
+ * @param path
+ */
 export function loadSchema(path: string) {
   const plainObject = JSON.parse(readFileSync(path, "utf-8"));
-  const schema = plainToClass(ERSchema, plainObject);
-  schema.inflections = new InflectionTable(schema.entity.name);
+  const schema = plainToClass(Schema, plainObject);
+  schema.postTransform();
+  debug(schema);
   return schema;
 }
