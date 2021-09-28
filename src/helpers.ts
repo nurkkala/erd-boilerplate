@@ -9,12 +9,12 @@ export function lowerFirst(s: string) {
 
 // Create various inflections of an entity name.
 export class InflectionTable {
-  entityUpper: string;
-  entityLower: string;
-  entityUpperPlural: string;
-  entityLowerPlural: string;
-  entityAllUpper: string;
-  entityAllUpperPlural: string;
+  entityUpper: string; // Resource
+  entityLower: string; // resource
+  entityUpperPlural: string; // Resources
+  entityLowerPlural: string; // resources
+  entityAllUpper: string; // RESOURCE
+  entityAllUpperPlural: string; // RESOURCES
 
   constructor(name: string) {
     invariant(/^[A-Z][A-Za-z]*$/.test(name), `invalid name '${name}'`);

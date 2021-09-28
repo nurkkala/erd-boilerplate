@@ -157,8 +157,7 @@ class Boiler {
     this.banner.show("resolver");
     console.log(
       this.engine.render("resolver", {
-        entityName: this.schema.inflections.entityUpper,
-        entityNamePlural: this.schema.inflections.entityUpperPlural,
+        inflections: this.schema.inflections,
       })
     );
   }

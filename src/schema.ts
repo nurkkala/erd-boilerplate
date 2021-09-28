@@ -58,10 +58,11 @@ function joinOptionsAsObject(options: string[]) {
 }
 
 enum ImportType {
-  TypeOrm = "typeOrm",
-  GraphQl = "graphQl",
-  Entities = "entities",
-  Decorators = "decorators",
+  TypeOrm = "typeOrm", // From `typeorm` module
+  GraphQl = "graphQl", // From `@nestjs/graphql` module
+  Entities = "entities", // Local entities
+  Decorators = "decorators", // Project-wide decorators
+  Statements = "statements", // Entire `import` statements for other stuff.
 }
 
 /**
@@ -93,7 +94,14 @@ class GlobalImports {
   forTemplate() {
     const result: { [key: string]: string } = {};
     for (const importType of Object.values(ImportType)) {
-      result[importType] = Array.from(this.allTypes[importType]).join(", ");
+      switch (importType) {
+        case ImportType.Statements:
+          result[importType] = Array.from(this.allTypes[importType]).join("\n");
+          break;
+        default:
+          result[importType] = Array.from(this.allTypes[importType]).join(", ");
+          break;
+      }
     }
     return result;
   }
@@ -141,18 +149,23 @@ class Attribute {
       case ScalarType.DateTime:
         // Decorator will infer type from TypeScript declaration
         return null;
+      case SpecialType.Created:
+      case SpecialType.Updated:
+        // Special cases that will be handed elsewhere (e.g., `Created` will end
+        // up decorated as a `@CreateDateColumn`.
+        return null;
       case ScalarType.Integer:
         globalImports.add(ImportType.GraphQl, "Int");
         return "() => Int";
       case ScalarType.Float:
         globalImports.add(ImportType.GraphQl, "Float");
         return "() => Float";
-      case SpecialType.Created:
-      case SpecialType.Updated:
       case SpecialType.Json:
-        // Special cases that will be handed elsewhere (e.g., `Created` will end
-        // up decorated as a `@CreateDateColumn`.
-        return null;
+        globalImports.add(
+          ImportType.Statements,
+          "import { GraphQLJSONObject } from 'graphql-type-json';"
+        );
+        return "() => GraphQLJSONObject";
       default:
         throw Error(`Bogus type '${this.type}'`);
     }
@@ -184,12 +197,15 @@ class Attribute {
     if (opType === OpType.UPDATE || this.nullable) {
       options.push("nullable: true");
     }
+    const fieldArgs = [joinOptionsAsObject(options)];
+
     const gqlType = this.getGraphQLType();
     if (gqlType) {
-      options.unshift(gqlType);
+      fieldArgs.unshift(gqlType);
     }
+
     globalImports.add(ImportType.GraphQl, "Field");
-    return `@Field(${joinOptionsAsObject(options)})`;
+    return `@Field(${fieldArgs.join(", ")})`;
   }
 
   private createColumnDecorator(opType: OpType) {
@@ -220,9 +236,11 @@ class Attribute {
       case ScalarType.DateTime:
         options.push('type: "Date"');
         break;
+      case SpecialType.Json:
+        options.push('type: "jsonb"');
+        break;
       case ScalarType.String:
       case ScalarType.Boolean:
-      case SpecialType.Json:
         // TypeORM infers correct type from the declaration.
         break;
       default:

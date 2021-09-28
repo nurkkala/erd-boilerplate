@@ -1,29 +1,36 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { {{ entityName }}, {{ entityName }}CreateInput } from "./entities";
+import {
+  {{ entityName }}, {{ entityName }}CreateInput, {{ entityName }}UpdateInput
+} from "../models";
 import { Repository } from "typeorm";
 
 @Injectable()
 export class {{ entityName }}Service {
   constructor(
-    @InjectRepository({{ entityName }}) private readonly {{ lower entityName }}Repo: Repository<{{ entityName }}>
+    @InjectRepository({{ entityName }})
+    private readonly repo: Repository<{{ entityName }}>
   ) {}
 
-  create{{ entityName }}(createInput: {{ entityName }}CreateInput) {
-    return this.{{ lower entityName }}Repo.save(this.{{ lower entityName }}Repo.create(createInput));
+  create(createInput: {{ entityName }}CreateInput) {
+    return this.repo.save(this.repo.create(createInput));
   }
 
-  read{{ entityNamePlural }}() {
-    return this.{{ lower entityName }}Repo.find();
+  readOne(id: number) {
+    return this.repo.findOne(id);
   }
 
-  update{{ entityName }}(updateInput: {{ entityName }}UpdateInput) {
-    return this.{{ lower entityName }}Repo
+  readAll() {
+    return this.repo.find();
+  }
+
+  update(updateInput: {{ entityName }}UpdateInput) {
+    return this.repo
     .preload(updateInput)
-    .then(result => this.{{ lower entityName }}Repo.save(result));
+    .then(result => this.repo.save(result));
   }
 
-  delete{{ entityName }}(id: number) {
-    return this.{{ lower entityName }}Repo.delete(id).then(result => result.affected);
+  delete(id: number) {
+    return this.repo.delete(id).then(result => result.affected);
   }
 }
