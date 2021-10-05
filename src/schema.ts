@@ -1,5 +1,5 @@
 import { plainToClass, Type } from "class-transformer";
-import { InflectionTable, lowerFirst } from "./helpers";
+import Inflections from "./inflections";
 import { readFileSync } from "fs";
 import * as _ from "lodash";
 
@@ -34,6 +34,11 @@ enum RelationshipType {
   ManyToOne = "manyToOne",
   ManyToMany = "manyToMany",
   ManyToManyOwner = "manyToManyOwner",
+}
+
+interface Retriever {
+  isSingular: boolean;
+  toEntity: Inflections;
 }
 
 export enum OpType {
@@ -315,7 +320,15 @@ class Entity {
   name = "";
   description = "";
   private pk = "";
+  private _inflections: Inflections | null = null;
   @Type(() => Attribute) attributes: Attribute[] = [];
+
+  get inflections() {
+    if (!this._inflections) {
+      this._inflections = new Inflections(this.name);
+    }
+    return this._inflections;
+  }
 
   public primaryKey(opType: OpType) {
     globalImports.add(ImportType.TypeOrm, "Entity");
@@ -348,7 +361,7 @@ class Relationship {
   private type: RelationshipType | null = null;
   private to: string = "";
   private nullable: boolean = true; // Default for TypeORM
-  description: string = "";
+  private description: string = "";
 
   private createGraphQLDecorator() {
     globalImports.add(ImportType.GraphQl, "Field");
@@ -378,16 +391,17 @@ class Relationship {
     }
   }
 
-  private createInverseRelationDecorator(inflections: InflectionTable) {
-    const toLower = lowerFirst(this.to);
+  private createInverseRelationDecorator(entityInflections: Inflections) {
+    const targetInflections = new Inflections(this.to);
+    const toLower = targetInflections.initLowerSg;
 
     switch (this.type) {
       case RelationshipType.OneToMany:
-        return `${toLower} => ${toLower}.${inflections.entityLower}`;
+        return `${toLower} => ${toLower}.${entityInflections.initLowerSg}`;
       case RelationshipType.ManyToOne:
       case RelationshipType.ManyToMany:
       case RelationshipType.ManyToManyOwner:
-        return `${toLower} => ${toLower}.${inflections.entityLowerPlural}`;
+        return `${toLower} => ${toLower}.${entityInflections.initLowerPl}`;
     }
   }
 
@@ -402,13 +416,31 @@ class Relationship {
     }
   }
 
+  public createRetriever(): Retriever {
+    let isSingular = true;
+    switch (this.type) {
+      case RelationshipType.OneToMany:
+      case RelationshipType.ManyToMany:
+      case RelationshipType.ManyToManyOwner:
+        isSingular = false;
+        break;
+      case RelationshipType.ManyToOne:
+        isSingular = true;
+        break;
+    }
+    return {
+      isSingular,
+      toEntity: new Inflections(this.to),
+    };
+  }
+
   // Assemble all decorators for this relationship.
-  public decorators(inflections: InflectionTable) {
+  public decorators(entity: Entity) {
     const name = this.createTypeOrmDecorator();
 
     const allArgs = [
       `() => ${this.to}`,
-      this.createInverseRelationDecorator(inflections),
+      this.createInverseRelationDecorator(entity.inflections),
     ];
     if (!this.nullable) {
       // Only if not the default.
@@ -433,18 +465,14 @@ class Relationship {
 
 // The ERD itself.
 export class Schema {
-  inflections: InflectionTable = {} as InflectionTable;
   @Type(() => Entity) entity: Entity = {} as Entity;
   @Type(() => Relationship) relationships: Relationship[] = [];
-
-  postTransform() {
-    this.inflections = new InflectionTable(this.entity.name);
-  }
 
   declareFields() {
     const objectFields: string[] = [];
     const createFields: string[] = [];
     const updateFields: string[] = [];
+    const retrievers: Retriever[] = [];
 
     // Primary key
     objectFields.push(this.entity.primaryKey(OpType.OBJECT));
@@ -458,19 +486,19 @@ export class Schema {
     }
 
     // Relationships
-    for (const rel of this.relationships) {
-      objectFields.push(rel.decorators(this.inflections));
+    for (const relationship of this.relationships) {
+      objectFields.push(relationship.decorators(this.entity));
+      retrievers.push(relationship.createRetriever());
     }
 
-    const context = {
+    return {
       globalImports: globalImports.forTemplate(),
       entity: this.entity,
       objectFields: objectFields.join(JOIN_DOUBLE_SPACE),
       inputFields: createFields.join(JOIN_DOUBLE_SPACE),
       updateFields: updateFields.join(JOIN_DOUBLE_SPACE),
+      retrievers,
     };
-    debug("Context %O", context);
-    return context;
   }
 }
 
@@ -481,7 +509,6 @@ export class Schema {
 export function loadSchema(path: string) {
   const plainObject = JSON.parse(readFileSync(path, "utf-8"));
   const schema = plainToClass(Schema, plainObject);
-  schema.postTransform();
   debug(schema);
   return schema;
 }

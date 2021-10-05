@@ -12,8 +12,8 @@ import { Command } from "commander";
 import { sync } from "walkdir/walkdir";
 import { join } from "path";
 import * as _ from "lodash";
-import Debug from "debug";
 
+import Debug from "debug";
 const debug = Debug("boil");
 
 // Map a string to its corresponding Handlebars template.
@@ -131,24 +131,24 @@ class Boiler {
   }
 
   private showDetails() {
-    this.banner.show(this.schema.inflections.entityLower);
+    this.banner.show(this.schema.entity.inflections.initLowerSg);
     console.log(JSON.stringify(this.schema, null, 2));
   }
 
   private generateEntity() {
     this.banner.show("entity");
-    console.log(
-      this.engine.render("entity", {
-        ...this.schema.declareFields(),
-      })
-    );
+    const context = {
+      ...this.schema.declareFields(),
+    };
+    debug("CONTEXT %O", context);
+    console.log(this.engine.render("entity", context));
   }
 
   private generateModule() {
     this.banner.show("module");
     console.log(
       this.engine.render("module", {
-        entityName: this.schema.inflections.entityUpper,
+        entityName: this.schema.entity.inflections.initUpperSg,
       })
     );
   }
@@ -157,34 +157,38 @@ class Boiler {
     this.banner.show("resolver");
     console.log(
       this.engine.render("resolver", {
-        inflections: this.schema.inflections,
+        inflections: this.schema.entity.inflections,
       })
     );
   }
 
   private generateService() {
     this.banner.show("service");
-    console.log(
-      this.engine.render("service", {
-        entityName: this.schema.inflections.entityUpper,
-        entityNamePlural: this.schema.inflections.entityUpperPlural,
-      })
-    );
+    const context = {
+      entity: this.schema.entity.inflections,
+      retrievers: _.map(this.schema.relationships, (rel) =>
+        rel.createRetriever()
+      ),
+    };
+    debug("CONTEXT %O", context);
+    console.log(this.engine.render("service", context));
   }
 
   private generateTable() {
     this.banner.show("table");
-    console.log(this.engine.render("table", this.schema.inflections));
+    console.log(this.engine.render("table", this.schema.entity.inflections));
   }
 
   private generateCreateUpdate() {
     this.banner.show("create-update");
-    console.log(this.engine.render("create-update", this.schema.inflections));
+    console.log(
+      this.engine.render("create-update", this.schema.entity.inflections)
+    );
   }
 
   private generateGraphQL() {
     this.banner.show("graphql");
-    console.log(this.engine.render("crud", this.schema.inflections));
+    console.log(this.engine.render("crud", this.schema.entity.inflections));
   }
 }
 

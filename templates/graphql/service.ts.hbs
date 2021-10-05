@@ -1,35 +1,70 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import {
-  {{ entityName }}, {{ entityName }}CreateInput, {{ entityName }}UpdateInput
+  {{ entity.initUpperSg }},
+  {{ entity.initUpperSg }}CreateInput,
+  {{ entity.initUpperSg }}UpdateInput
 } from "../models";
 import { Repository } from "typeorm";
+import { BaseService } from '@/shared/base.service';
 
 @Injectable()
-export class {{ entityName }}Service {
+export class {{ entity.initUpperSg }}Service extends BaseService<{{ entity.initUpperSg }}> {
   constructor(
-    @InjectRepository({{ entityName }})
-    private readonly repo: Repository<{{ entityName }}>
-  ) {}
+    @InjectRepository({{ entity.initUpperSg }})
+    private readonly repo: Repository<{{ entity.initUpperSg }}>
+  ) {
+    super(repo);
+  }
 
-  create(createInput: {{ entityName }}CreateInput) {
+  // Create a new {{ entity.initUpperSg }}
+  create(createInput: {{ entity.initUpperSg }}CreateInput) {
     return this.repo.save(this.repo.create(createInput));
   }
 
+  // Selectively include those relations that are always retrieved.
+  private alwaysRelate = [
+  {{#each retrievers }}
+      {{#if isSingular}}
+        // "{{ toEntity.initLowerSg }}",
+      {{else}}
+        // "{{ toEntity.initLowerPl }}",
+      {{/if}}
+  {{/each}}
+  ];
+
+  // Read a single {{ entity.initUpperSg }}
   readOne(id: number) {
-    return this.repo.findOne(id);
+    return this.repo.findOne(id, { relations: this.alwaysRelate });
   }
 
+  // Read all {{ entity.initUpperPl }}
   readAll() {
-    return this.repo.find();
+    return this.repo.find({ relations: this.alwaysRelate });
   }
 
-  update(updateInput: {{ entityName }}UpdateInput) {
+  // Methods to retrieve related entities.
+{{#each retrievers}}
+
+  {{#if isSingular}}
+  retrieveRelated{{ toEntity.initUpperSg }}({{ ../entity.initLowerSg }}: {{ ../entity.initUpperSg }}) {
+    return this.retrieveOne({{ ../entity.initLowerSg }}, "{{ toEntity.initLowerSg }}");
+  }
+  {{else}}
+  retrieveRelated{{ toEntity.initUpperPl }}({{ ../entity.initLowerPl }}: {{ ../entity.initUpperPl }}) {
+    return this.retrieveOne({{ ../entity.initLowerPl }}, "{{ toEntity.initLowerPl }}");
+  }
+  {{/if}}
+{{/each}}
+
+  // Update a {{ entity.initUpperSg }}.
+  update(updateInput: {{ entity.initUpperSg }}UpdateInput) {
     return this.repo
     .preload(updateInput)
     .then(result => this.repo.save(result));
   }
 
+  // Delete a {{ entity.initUpperSg }}.
   delete(id: number) {
     return this.repo.delete(id).then(result => result.affected);
   }

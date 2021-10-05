@@ -17,12 +17,12 @@ import {
   }
 
   @Query(() => {{ inflections.entityUpper }})
-    read{{ inflections.entityUpper }}(id: number) {
+    readOne{{ inflections.entityUpper }}(id: number) {
     return this.{{ inflections.entityLower }}Service.readOne(id);
   }
 
   @Query(() => [{{ inflections.entityUpper }}])
-    read{{ inflections.entityUpperPlural }}() {
+    readAll{{ inflections.entityUpperPlural }}() {
     return this.{{ inflections.entityLower }}Service.readAll();
   }
 
