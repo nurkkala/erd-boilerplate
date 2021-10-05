@@ -16,12 +16,12 @@ enum ScalarType {
   Boolean = "boolean",
   Integer = "integer",
   Float = "float",
-  Date = "date",
-  Time = "time",
-  DateTime = "datetime",
 }
 
 enum SpecialType {
+  Date = "date",
+  Time = "time",
+  DateTime = "datetime",
   Created = "created",
   Updated = "updated",
   Json = "json",
@@ -149,9 +149,9 @@ class Attribute {
       case ScalarType.String:
       case ScalarType.Text:
       case ScalarType.Boolean:
-      case ScalarType.Date:
-      case ScalarType.Time:
-      case ScalarType.DateTime:
+      case SpecialType.Date:
+      case SpecialType.Time:
+      case SpecialType.DateTime:
         // Decorator will infer type from TypeScript declaration
         return null;
       case SpecialType.Created:
@@ -218,13 +218,7 @@ class Attribute {
       return "";
     }
 
-    const options = [`comment: "${this.description}"`];
-    if (this.nullable) {
-      options.push("nullable: true");
-    }
-    if (this.unique) {
-      options.push("unique: true");
-    }
+    const options = [];
 
     switch (this.type) {
       case SpecialType.Created:
@@ -236,10 +230,14 @@ class Attribute {
       case ScalarType.Text:
         options.push('type: "text"');
         break;
-      case ScalarType.Date:
-      case ScalarType.Time:
-      case ScalarType.DateTime:
-        options.push('type: "Date"');
+      case SpecialType.Date:
+        options.push('type: "date"');
+        break;
+      case SpecialType.Time:
+        options.push('type: "time with time zone"');
+        break;
+      case SpecialType.DateTime:
+        options.push('type: "timestamp with time zone"');
         break;
       case SpecialType.Json:
         options.push('type: "jsonb"');
@@ -250,6 +248,14 @@ class Attribute {
         break;
       default:
         throw Error(`Bogus type '${this.type}'`);
+    }
+
+    options.push(`comment: "${this.description}"`);
+    if (this.nullable) {
+      options.push("nullable: true");
+    }
+    if (this.unique) {
+      options.push("unique: true");
     }
 
     globalImports.add(ImportType.TypeOrm, "Column");
@@ -263,9 +269,9 @@ class Attribute {
     switch (this.type) {
       case SpecialType.Created:
       case SpecialType.Updated:
-      case ScalarType.Date:
-      case ScalarType.Time:
-      case ScalarType.DateTime:
+      case SpecialType.Date:
+      case SpecialType.Time:
+      case SpecialType.DateTime:
         tsType = "Date";
         break;
       case SpecialType.Json:
