@@ -155,11 +155,11 @@ class Boiler {
 
   private generateResolver() {
     this.banner.show("resolver");
-    console.log(
-      this.engine.render("resolver", {
-        inflections: this.schema.entity.inflections,
-      })
-    );
+    const context = {
+      entity: this.schema.entity.inflections,
+    };
+    debug("CONTEXT %O", context);
+    console.log(this.engine.render("resolver", context));
   }
 
   private generateService() {

@@ -1,0 +1,58 @@
+\documentclass{article}
+
+\usepackage[colorlinks]{hyperref}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage[svgnames]{xcolor}
+\usepackage{fancyvrb}
+
+\input{boxes}
+\input{commands}
+
+\title{Streamlined Application Development\\with \boil}
+\author{Dr.\ Tom Nurkkala}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+\section{Introduction}
+\label{sec:introduction}
+
+Many components of a database-backed web application
+depend critically
+on the specifics of the database schema.
+For example:
+\begin{enumerate}
+\item Object-Relational Mapper (ORM) model classes
+\item Data transfer objects (DTO's)
+\item Database service classes
+\item RESTful API resources
+\item GraphQL object types, input types, and resolvers
+\item UI CRUD views that maintain database content
+\end{enumerate}
+Creating
+and updating
+such components manually
+can be tedious, inconsistent, and error prone.
+Different components
+rely on different aspects
+of the underlying database schema
+and may employ different naming conventions and
+coding practices.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\textwidth]{block-diagram}
+  \caption{\boil{} block diagram}
+  \label{fig:block-diagram}
+\end{figure}
+
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:
+
+% LocalWords:  DTO's GraphQL

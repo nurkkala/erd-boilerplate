@@ -1,38 +1,38 @@
 import { Args, Mutation, Query, Resolver, Int } from "@nestjs/graphql";
 
-import { {{ inflections.entityUpper }}Service } from "../services";
+import { {{ entity.initUpperSg }}Service } from "../services";
 import {
-  {{ inflections.entityUpper }},
-  {{ inflections.entityUpper }}CreateInput,
-  {{ inflections.entityUpper }}UpdateInput
+  {{ entity.initUpperSg }},
+  {{ entity.initUpperSg }}CreateInput,
+  {{ entity.initUpperSg }}UpdateInput
 } from "../models";
 
-@Resolver("{{ inflections.entityUpper }}")
-  export class {{ inflections.entityUpper }}Resolver {
-  constructor(private readonly {{ inflections.entityLower }}Service: {{ inflections.entityUpper }}Service) {}
+@Resolver("{{ entity.initUpperSg }}")
+  export class {{ entity.initUpperSg }}Resolver {
+  constructor(private readonly {{ inflections.entityLower }}Service: {{ entity.initUpperSg }}Service) {}
 
-  @Mutation(() => {{ inflections.entityUpper }})
-    create{{ inflections.entityUpper }}(@Args("createInput") createInput: {{ inflections.entityUpper }}CreateInput) {
+  @Mutation(() => {{ entity.initUpperSg }})
+    create{{ entity.initUpperSg }}(@Args("createInput") createInput: {{ entity.initUpperSg }}CreateInput) {
     return this.{{ inflections.entityLower }}Service.create(createInput);
   }
 
-  @Query(() => {{ inflections.entityUpper }})
-    readOne{{ inflections.entityUpper }}(id: number) {
+  @Query(() => {{ entity.initUpperSg }})
+    readOne{{ entity.initUpperSg }}(id: number) {
     return this.{{ inflections.entityLower }}Service.readOne(id);
   }
 
-  @Query(() => [{{ inflections.entityUpper }}])
-    readAll{{ inflections.entityUpperPlural }}() {
+  @Query(() => [{{ entity.initUpperSg }}])
+    readAll{{ entity.initUpperPl }}() {
     return this.{{ inflections.entityLower }}Service.readAll();
   }
 
-  @Mutation(() => {{ inflections.entityUpper }})
-    update{{ inflections.entityUpper }}(@Args("updateInput") updateInput: {{ inflections.entityUpper }}UpdateInput) {
+  @Mutation(() => {{ entity.initUpperSg }})
+    update{{ entity.initUpperSg }}(@Args("updateInput") updateInput: {{ entity.initUpperSg }}UpdateInput) {
     return this.{{ inflections.entityLower }}Service.update(updateInput);
   }
 
   @Mutation(() => Int)
-    delete{{ inflections.entityUpper }}(@Args({ name: "id", type: () => Int }) id: number) {
+    delete{{ entity.initUpperSg }}(@Args({ name: "id", type: () => Int }) id: number) {
     return this.{{ inflections.entityLower }}Service.delete(id);
   }
 }

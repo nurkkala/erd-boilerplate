@@ -1,3 +1,5 @@
 /node_modules/
 .idea/
 /dist/
+/docs/architecture/auto/
+/docs/architecture/boilerplate-architecture.pdf
