@@ -1,5 +1,9 @@
 # Boilerplate
 
+Generate various database-related artifacts
+based on a JSON file specifying the entities and relationships
+in a database schema.
+
 ## Null values
 
 By default, both columns (TypeORM) and fields (TypeGraphQL)
