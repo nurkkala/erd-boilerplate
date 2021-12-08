@@ -1,0 +1,45 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{p}{\PYGZob{}}
+  \PYG{n+nt}{\PYGZdq{}entity\PYGZdq{}}\PYG{p}{:} \PYG{p}{\PYGZob{}}
+    \PYG{n+nt}{\PYGZdq{}name\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}Group\PYGZdq{}}\PYG{p}{,}
+    \PYG{n+nt}{\PYGZdq{}pk\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}id\PYGZdq{}}\PYG{p}{,}
+    \PYG{n+nt}{\PYGZdq{}description\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}Group of survey respondents\PYGZdq{}}\PYG{p}{,}
+    \PYG{n+nt}{\PYGZdq{}attributes\PYGZdq{}}\PYG{p}{:} \PYG{p}{[}
+      \PYG{p}{\PYGZob{}}
+        \PYG{n+nt}{\PYGZdq{}name\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}name\PYGZdq{}}\PYG{p}{,}
+        \PYG{n+nt}{\PYGZdq{}type\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}string\PYGZdq{}}\PYG{p}{,}
+        \PYG{n+nt}{\PYGZdq{}description\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}Group name\PYGZdq{}}
+      \PYG{p}{\PYGZcb{},}
+      \PYG{p}{\PYGZob{}}
+        \PYG{n+nt}{\PYGZdq{}name\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}closedAfter\PYGZdq{}}\PYG{p}{,}
+        \PYG{n+nt}{\PYGZdq{}type\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}string\PYGZdq{}}\PYG{p}{,}
+        \PYG{n+nt}{\PYGZdq{}description\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}Date when survey closes\PYGZdq{}}
+      \PYG{p}{\PYGZcb{},}
+      \PYG{p}{\PYGZob{}}
+        \PYG{n+nt}{\PYGZdq{}name\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}adminEmail\PYGZdq{}}\PYG{p}{,}
+        \PYG{n+nt}{\PYGZdq{}type\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}string\PYGZdq{}}\PYG{p}{,}
+        \PYG{n+nt}{\PYGZdq{}description\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}Group administrator email address\PYGZdq{}}
+      \PYG{p}{\PYGZcb{},}
+      \PYG{p}{\PYGZob{}}
+        \PYG{n+nt}{\PYGZdq{}name\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}codeWord\PYGZdq{}}\PYG{p}{,}
+        \PYG{n+nt}{\PYGZdq{}type\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}string\PYGZdq{}}\PYG{p}{,}
+        \PYG{n+nt}{\PYGZdq{}description\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}Survey code word used by group\PYGZdq{}}
+      \PYG{p}{\PYGZcb{}}
+    \PYG{p}{]}
+  \PYG{p}{\PYGZcb{},}
+  \PYG{n+nt}{\PYGZdq{}relationships\PYGZdq{}}\PYG{p}{:} \PYG{p}{[}
+    \PYG{p}{\PYGZob{}}
+      \PYG{n+nt}{\PYGZdq{}name\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}survey\PYGZdq{}}\PYG{p}{,}
+      \PYG{n+nt}{\PYGZdq{}type\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}manyToOne\PYGZdq{}}\PYG{p}{,}
+      \PYG{n+nt}{\PYGZdq{}to\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}Survey\PYGZdq{}}\PYG{p}{,}
+      \PYG{n+nt}{\PYGZdq{}description\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}Survey for this group\PYGZdq{}}
+    \PYG{p}{\PYGZcb{},}
+    \PYG{p}{\PYGZob{}}
+      \PYG{n+nt}{\PYGZdq{}name\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}groupType\PYGZdq{}}\PYG{p}{,}
+      \PYG{n+nt}{\PYGZdq{}type\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}manyToOne\PYGZdq{}}\PYG{p}{,}
+      \PYG{n+nt}{\PYGZdq{}to\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}GroupType\PYGZdq{}}\PYG{p}{,}
+      \PYG{n+nt}{\PYGZdq{}description\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}Type for this group\PYGZdq{}}
+    \PYG{p}{\PYGZcb{}}
+  \PYG{p}{]}
+\PYG{p}{\PYGZcb{}}
+\end{Verbatim}

@@ -4,6 +4,7 @@
 \usepackage{booktabs}
 \usepackage{graphicx}
 \usepackage[svgnames]{xcolor}
+\usepackage{minted}
 \usepackage{fancyvrb}
 
 \input{boxes}
@@ -41,12 +42,145 @@ of the underlying database schema
 and may employ different naming conventions and
 coding practices.
 
-\begin{figure}[h]
+
+\section{Architecture}
+\label{sec:architecture}
+
+\subsection{Overview}
+\label{sec:overview}
+
+\begin{figure}
   \centering
   \includegraphics[width=\textwidth]{block-diagram}
-  \caption{\boil{} block diagram}
+  \caption{
+    \boil{} block diagram.
+    The \textsf{ERD Source} input file
+    must conform to the \textsf{JSON Schema}.
+    Based on command-line flags,
+    \boil{} generates one or more output files.
+  }
   \label{fig:block-diagram}
 \end{figure}
+
+\subsection{JSON Schema}
+\label{sec:json-schema}
+
+\boil{} defines
+a \href{https://json-schema.org/}{JSON Schema}
+for the ERD input file,
+allowing it to validate the file at run time.
+In addition,
+IDE's like
+\webstorm{}
+can read the JSON schema
+and provide syntax checking and code hinting
+while editing the ERD input file.
+
+\ghsrc{JSON Schema}{
+  JSON Schema describing the format of the ERD input file
+  accepted by \boil.
+}{schemata/er-schema.json}{1}
+
+\section{Usage}
+\label{sec:usage}
+
+This section considers the \hyperref[sec:command]{use of \boil},
+including a \hyperref[sec:example]{simple example}.
+
+\subsection{Command}
+\label{sec:command}
+
+Figure~\ref{fig:help} shows the help output
+from the main \boil{} command, \texttt{boil}.
+
+\begin{figure}[h]
+  \centering
+\begin{Verbatim}[frame=single,framerule=1pt,rulecolor=blue!50!white]
+Usage: boil [options] <schema-file>
+
+generate boilerplate from an ERD file
+
+Options:
+  -e --entity         generate entity
+  -m --module         generate module
+  -r --resolver       generate resolver
+  -s --service        generate service
+  -t --table          generate Vue table
+  -c --create-update  generate Vue create-update
+  -a --all            generate all
+  -b --banner         show banner before each section
+  -v --verbose        be verbose
+  -h, --help          display help for command
+\end{Verbatim}
+  \caption{\boil{} help output}
+  \label{fig:help}
+\end{figure}
+
+\subsection{Example}
+\label{sec:example}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\textwidth]{sample-erd}
+  \caption{Entity-relationship diagram
+    for the \texttt{Group}
+    entity and entities related to it.
+    The ERD source file for \texttt{Group}
+    appears in Listing~\ref{listing:group-erd}.}
+  \label{fig:erd}
+\end{figure}
+
+\begin{listing}
+\begin{minted}[linenos,stepnumber=5,frame=single,fontsize=\small]{JSON}
+{
+  "entity": {
+    "name": "Group",
+    "pk": "id",
+    "description": "Group of survey respondents",
+    "attributes": [
+      {
+        "name": "name",
+        "type": "string",
+        "description": "Group name"
+      },
+      {
+        "name": "closedAfter",
+        "type": "string",
+        "description": "Date when survey closes"
+      },
+      {
+        "name": "adminEmail",
+        "type": "string",
+        "description": "Group administrator email address"
+      },
+      {
+        "name": "codeWord",
+        "type": "string",
+        "description": "Survey code word used by group"
+      }
+    ]
+  },
+  "relationships": [
+    {
+      "name": "survey",
+      "type": "manyToOne",
+      "to": "Survey",
+      "description": "Survey for this group"
+    },
+    {
+      "name": "groupType",
+      "type": "manyToOne",
+      "to": "GroupType",
+      "description": "Type for this group"
+    }
+  ]
+}
+\end{minted}
+\caption{Sample ERD source file.
+Several attributes have been removed
+in order to fit the listing on a single page.}
+\label{listing:group-erd}
+\end{listing}
 
 \end{document}
 
