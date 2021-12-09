@@ -3,3 +3,4 @@
 /dist/
 /docs/architecture/auto/
 /docs/architecture/boilerplate-architecture.pdf
+/docs/architecture/_minted-boilerplate-architecture/*.pygtex
