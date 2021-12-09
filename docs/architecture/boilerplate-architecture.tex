@@ -10,6 +10,8 @@
 \input{boxes}
 \input{commands}
 
+\newcommand{\boilcmd}{\texttt{boil}}
+
 \title{Streamlined Application Development\\with \boil}
 \author{Dr.\ Tom Nurkkala}
 
@@ -42,58 +44,95 @@ of the underlying database schema
 and may employ different naming conventions and
 coding practices.
 
-
-\section{Architecture}
-\label{sec:architecture}
-
-\subsection{Overview}
-\label{sec:overview}
-
-\begin{figure}
-  \centering
-  \includegraphics[width=\textwidth]{block-diagram}
-  \caption{
-    \boil{} block diagram.
-    The \textsf{ERD Source} input file
-    must conform to the \textsf{JSON Schema}.
-    Based on command-line flags,
-    \boil{} generates one or more output files.
-  }
-  \label{fig:block-diagram}
-\end{figure}
-
-\subsection{JSON Schema}
-\label{sec:json-schema}
-
-\boil{} defines
-a \href{https://json-schema.org/}{JSON Schema}
-for the ERD input file,
-allowing it to validate the file at run time.
-In addition,
-IDE's like
-\webstorm{}
-can read the JSON schema
-and provide syntax checking and code hinting
-while editing the ERD input file.
-
-\ghsrc{JSON Schema}{
-  JSON Schema describing the format of the ERD input file
-  accepted by \boil.
-}{schemata/er-schema.json}{1}
+\boil{} consumes a JSON specification
+for part of a database schema
+(one entity and its relationships with other entities)
+and generates ``starter code''
+for one or more components whose
+functionality depends on that portion of the schema.
 
 \section{Usage}
 \label{sec:usage}
 
-This section considers the \hyperref[sec:command]{use of \boil},
-including a \hyperref[sec:example]{simple example}.
+Consider the snippet of a larger entity-relationship diagram (ERD)\footnote{View the
+  \href{https://lucid.app/lucidchart/3b762a6b-a9f6-46fa-a54c-085f27f5b38d/edit?invitationId=inv_d358a7a6-5094-4a87-be16-4d7b25bad7ad}{full ERD}.}
+shown in Figure~\ref{fig:erd}.
+Our focus here is on the \texttt{Group} entity, which:
+\begin{enumerate}
+\item Stores attributes related a group respondents to an on-line survey
+  (e.g., group name, information on the group administrator).
+\item Has a many-to-one relationship with a \texttt{GroupType}
+  (e.g., members of a civic group or university course).
+\item Has a many-to-one relationship with a \texttt{Survey} entity
+  (e.g., the survey to which group members will respond).
+\end{enumerate}
+Having defined this entity and its relationships,
+our goal is to generate starter code that can 
+access and manipulate \texttt{Group} data
+in an underlying
+relational database management system (RDBMS).
+
+\begin{figure}
+  \centering
+  \includegraphics[width=\textwidth]{sample-erd}
+  \caption{Entity-relationship diagram
+    for the \texttt{Group}
+    entity and related entities.}
+  \label{fig:erd}
+\end{figure}
+
+\subsection{ERD Source File}
+\label{sec:erd-source-file}
+
+\boil{} is driven by a single JSON source file
+that details a single \emph{entity},
+its \emph{attributes}, and its \emph{relationships} with other entities.
+Appendix~\ref{sec:erd-source}
+shows the source file that corresponds to
+the \texttt{Group} entity
+from Figure~\ref{fig:erd}.
+
+An ERD source file defines:
+\begin{enumerate}
+\item A single database entity, including its primary key and description.
+\item Each attribute in the entity, including:
+  \begin{enumerate}
+  \item Type (e.g., \texttt{string}, \texttt{text},
+    \texttt{float}, \texttt{date})
+  \item Description
+  \item Uniqueness
+  \item Nullability
+  \item Whether it should be exposed via \gql
+\end{enumerate}
+\item All relationships from the entity, including:
+  \begin{enumerate}
+  \item Name
+  \item Description
+  \item Destination entity
+  \item Type (e.g., one-to-many, many-to-one, many-to-many)
+  \item Nullability
+  \end{enumerate}
+\end{enumerate}
 
 \subsection{Command}
 \label{sec:command}
 
-Figure~\ref{fig:help} shows the help output
-from the main \boil{} command, \texttt{boil}.
 
-\begin{figure}[h]
+From an \hyperref[src:erd-source-file]{ERD source file}
+the \boil{} command can generate various output files.
+Figure~\ref{fig:help} shows the help output
+from the main \boil{} command, \boilcmd,
+which enumerates the types of output files it can generate.
+
+Currently,
+\boil{} is tailored to generate source files
+that target
+the \nest{} server-side framework
+and a \vue-based web application using the \vuetify{} Material Design framework.
+These targets are reflected in the following descriptions
+of \boilcmd{} options.
+
+\begin{figure}[hbt]
   \centering
 \begin{Verbatim}[frame=single,framerule=1pt,rulecolor=blue!50!white]
 Usage: boil [options] <schema-file>
@@ -116,71 +155,199 @@ Options:
   \label{fig:help}
 \end{figure}
 
-\subsection{Example}
-\label{sec:example}
+\begin{description}
+\item[\texttt{entity}]
+  \ts{} class
+  that includes decorators
+  to define both a \typeorm{} database entity
+  and a \gql{} object type,
+  as well as \gql{} input types
+  for inserting and updating the entity.
+\item[\texttt{module}]
+  \nest{} module file
+\item[\texttt{resolve}]
+  \gql{} resolver for CRUD operations
+\item[\texttt{service}]
+  \typeorm{} service for CRUD operations
+\item[\texttt{table}]
+  \vue{} component to display entity contents in a \vuetify{} table
+\item[\texttt{create-update}]
+  \vue{} component to create and update the entity
+\end{description}
+
+\subsection{Example Output}
+\label{sec:output}
+
+Table~\ref{tab:sample-output}
+links to listings of \ts{} output
+generated by \boil{}
+when invoked with the indicated flag
+on the ERD source file
+shown in Appendix~\ref{sec:erd-source}.
+
+\begin{table}[h]
+  \centering
+  \begin{tabular}{lll}
+    \toprule
+    Description                  & Flag                  & Listing                                                            \\
+    \midrule
+    \typeorm{} and \gql{} Entity & \texttt{-{}-entity}   & \hyperref[sec:output-entity]{Appendix~\ref{sec:output-entity}}     \\
+    \typeorm{} Database Service  & \texttt{-{}-service}  & \hyperref[sec:output-service]{Appendix~\ref{sec:output-service}}   \\
+    \gql{} Resolver              & \texttt{-{}-resolver} & \hyperref[sec:output-resolver]{Appendix~\ref{sec:output-resolver}} \\
+    \bottomrule
+  \end{tabular}
+  \caption{Details of sample output from \boil}
+  \label{tab:sample-output}
+\end{table}
+
+
+\section{Architecture}
+\label{sec:architecture}
+
+This section considers the architecture of \boil.
+Refer to Figure~\ref{fig:block-diagram} for a block diagram.
 
 \begin{figure}[h]
   \centering
-  \includegraphics[width=\textwidth]{sample-erd}
-  \caption{Entity-relationship diagram
-    for the \texttt{Group}
-    entity and entities related to it.
-    The ERD source file for \texttt{Group}
-    appears in Listing~\ref{listing:group-erd}.}
-  \label{fig:erd}
+  \includegraphics[width=0.8\textwidth]{block-diagram}
+  \caption{
+    \boil{} block diagram.
+    The \textsf{ERD Source} input file
+    must conform to the \textsf{JSON Schema}.
+    Based on command-line flags,
+    \boil{} generates one or more output files.
+  }
+  \label{fig:block-diagram}
 \end{figure}
 
-\begin{listing}
-\begin{minted}[linenos,stepnumber=5,frame=single,fontsize=\small]{JSON}
-{
-  "entity": {
-    "name": "Group",
-    "pk": "id",
-    "description": "Group of survey respondents",
-    "attributes": [
-      {
-        "name": "name",
-        "type": "string",
-        "description": "Group name"
-      },
-      {
-        "name": "closedAfter",
-        "type": "string",
-        "description": "Date when survey closes"
-      },
-      {
-        "name": "adminEmail",
-        "type": "string",
-        "description": "Group administrator email address"
-      },
-      {
-        "name": "codeWord",
-        "type": "string",
-        "description": "Survey code word used by group"
-      }
-    ]
-  },
-  "relationships": [
-    {
-      "name": "survey",
-      "type": "manyToOne",
-      "to": "Survey",
-      "description": "Survey for this group"
-    },
-    {
-      "name": "groupType",
-      "type": "manyToOne",
-      "to": "GroupType",
-      "description": "Type for this group"
-    }
-  ]
-}
-\end{minted}
-\caption{Sample ERD source file.
-Several attributes have been removed
-in order to fit the listing on a single page.}
-\label{listing:group-erd}
-\end{listing}
+\subsection{JSON Schema}
+\label{sec:json-schema}
+
+\boil{} defines
+a \href{https://json-schema.org/}{JSON Schema}
+for the ERD source file,
+allowing it to validate the file at run time.
+In addition,
+IDE's like
+\webstorm{}
+can read the JSON schema
+and provide syntax checking and code hinting
+while editing the ERD input file.
+
+\ghsrc{JSON Schema}{
+  JSON Schema describing the format of the ERD input file
+  accepted by \boil.
+}{schemata/er-schema.json}{1}
+
+\subsection{Schema Classes}
+\label{sec:schema-classes}
+
+Corresponding to the contents of an ERD source file,
+\boil{}
+defines a family of classes
+that represent the details the ERD,
+including the entity, attributes, relationships,
+and the schema itself.
+\boil{} employs
+the \href{https://www.npmjs.com/package/class-transformer}{\texttt{class-transformer}}
+module to ``hydrate''
+the ERD data from the source file
+into these classes.
+The classes themselves implement functionality
+to process the details of the ERD.
+
+\ghsrc{Schema Classes}{
+  Classes, created from the ERD source file,
+  that drive the generation of \boil{} output.
+}{src/schema.ts}{1}
+
+\subsection{Inflections}
+\label{sec:inflections}
+
+To keep names consistent across all output
+generated by \boil,
+it implements an ``inflection factory''
+that converts root identifiers
+into various forms
+(e.g., initial capital, all caps, singular, plural, etc.).
+
+\ghsrc{Inflection Factory}{
+  The \texttt{Inflections} class
+  generates various inflections
+  of a root identifier
+}{src/inflections.ts}{17}
+
+\subsection{Templates}
+\label{sec:templates}
+
+\boil's \hyperref[sec:schema-classes]{schema classes}
+process the ERD source data
+into a form suitable for use in
+\emph{templates} 
+used to create the actual output files.
+\boil{} uses \handlebars{}
+for templating.
+
+\ghsrc{Entity Template}{
+  The entity in Appendix~\ref{sec:output-entity}
+  was generated by instantiating this \handlebars{} template.
+}{templates/graphql/entity.ts.hbs}{1}
+
+\subsection{Extensibility}
+\label{sec:extensibility}
+
+As written, \boil{} is
+tailored to generate code for 
+\nest, \vue, and \vuetify.
+However, its modular design
+and use of standalone \handlebars{} templates
+should allow it to be customized
+to generate code
+for other client- and server-side platforms.
+
+\newpage
+\appendix
+
+\section{Listings}
+\label{sec:listings}
+
+This appendix contains listings cited previously.
+
+\subsection{ERD Source}
+\label{sec:erd-source}
+
+Following is the JSON source for the \texttt{Group} entity (Figure~\ref{fig:erd}).
+\inputminted[linenos,stepnumber=5,frame=single,fontsize=\small]{JSON}{sample-erd.json}
+
+\subsection{Entity}
+\label{sec:output-entity}
+
+This is the \ts{} generated
+by invoking \boil{}
+with the \texttt{-{}-entity}
+flag on the full ERD source file
+for the \texttt{Group} entity
+(Section~\ref{sec:erd-source}).
+
+\inputminted[linenos,stepnumber=5,frame=single,fontsize=\small]{TypeScript}{group-entity.ts}
+
+\subsection{Database Service}
+\label{sec:output-service}
+
+A \typeorm{} database service module
+generated 
+with \texttt{boil -{}-service}.
+
+\inputminted[linenos,stepnumber=5,frame=single,fontsize=\small]{TypeScript}{group-service.ts}
+
+\subsection{GraphQL Resolver}
+\label{sec:output-resolver}
+
+A \gql{} resolver module
+generated 
+with \texttt{boil -{}-resolver}.
+
+\inputminted[linenos,stepnumber=5,frame=single,fontsize=\small]{TypeScript}{group-resolver.ts}
 
 \end{document}
 
@@ -189,4 +356,4 @@ in order to fit the listing on a single page.}
 %%% TeX-master: t
 %%% End:
 
-% LocalWords:  DTO's GraphQL
+% LocalWords:  DTO's GraphQL GroupType Nullability

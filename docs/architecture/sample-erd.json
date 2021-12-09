@@ -1,0 +1,58 @@
+{
+  "entity": {
+    "name": "Group",
+    "pk": "id",
+    "description": "Group of survey respondents",
+    "attributes": [
+      {
+        "name": "name",
+        "type": "string",
+        "description": "Group name"
+      },
+      {
+        "name": "created",
+        "type": "string",
+        "description": "Date when survey created"
+      },
+      {
+        "name": "closedAfter",
+        "type": "string",
+        "description": "Date when survey closes"
+      },
+      {
+        "name": "adminFirstName",
+        "type": "string",
+        "description": "Group administrator first name"
+      },
+      {
+        "name": "adminLastName",
+        "type": "string",
+        "description": "Group administrator last name"
+      },
+      {
+        "name": "adminEmail",
+        "type": "string",
+        "description": "Group administrator email address"
+      },
+      {
+        "name": "codeWord",
+        "type": "string",
+        "description": "Survey code word used by group"
+      }
+    ]
+  },
+  "relationships": [
+    {
+      "name": "survey",
+      "type": "manyToOne",
+      "to": "Survey",
+      "description": "Survey for this group"
+    },
+    {
+      "name": "groupType",
+      "type": "manyToOne",
+      "to": "GroupType",
+      "description": "Type for this group"
+    }
+  ]
+}
