@@ -51,20 +51,20 @@ export class {{ entity.initUpperSg }}Service extends BaseService<{{ entity.initU
     return this.retrieveOne({{ ../entity.initLowerSg }}, "{{ toEntity.initLowerSg }}");
   }
   {{else}}
-  retrieveRelated{{ toEntity.initUpperPl }}({{ ../entity.initLowerPl }}: {{ ../entity.initUpperPl }}) {
-    return this.retrieveOne({{ ../entity.initLowerPl }}, "{{ toEntity.initLowerPl }}");
+  retrieveRelated{{ toEntity.initUpperPl }}({{ ../entity.initLowerSg }}: {{ ../entity.initUpperSg }}) {
+    return this.retrieveOne({{ ../entity.initLowerSg }}, "{{ toEntity.initLowerPl }}");
   }
   {{/if}}
 {{/each}}
 
-  // Update a {{ entity.initUpperSg }}.
+  // Update {{ entity.aOrAn }} {{ entity.initUpperSg }}.
   update(updateInput: {{ entity.initUpperSg }}UpdateInput) {
     return this.repo
     .preload(updateInput)
     .then(result => this.repo.save(result));
   }
 
-  // Delete a {{ entity.initUpperSg }}.
+  // Delete {{ entity.aOrAn }} {{ entity.initUpperSg }}.
   delete(id: number) {
     return this.repo.delete(id).then(result => result.affected);
   }

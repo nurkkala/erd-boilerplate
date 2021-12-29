@@ -21,6 +21,7 @@ export default class Inflections {
   initLowerPl: string; // fooBars
   allUpperSg: string; // FOOBAR
   allUpperPl: string; // FOOBARS
+  aOrAn: string; // simple-minded "a" or "an"
 
   constructor(identifier: string) {
     invariant(
@@ -34,6 +35,7 @@ export default class Inflections {
     this.initLowerPl = pluralize(this.initLowerSg);
     this.allUpperSg = this.initLowerSg.toUpperCase();
     this.allUpperPl = this.initLowerPl.toUpperCase();
+    this.aOrAn = identifier.match(/^[aeiou]/i) ? "an" : "a";
   }
 }
 
