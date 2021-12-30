@@ -17,12 +17,12 @@ export class {{ entity.initUpperSg }}Service extends BaseService<{{ entity.initU
     super(repo);
   }
 
-  // Create a new {{ entity.initUpperSg }}
+  /** Create a new {{ entity.initUpperSg }} */
   create(createInput: {{ entity.initUpperSg }}CreateInput) {
     return this.repo.save(this.repo.create(createInput));
   }
 
-  // Selectively include those relations that are always retrieved.
+  /** Selectively include those relations that are always retrieved. */
   private alwaysRelate = [
   {{#each retrievers }}
       {{#if isSingular}}
@@ -33,12 +33,12 @@ export class {{ entity.initUpperSg }}Service extends BaseService<{{ entity.initU
   {{/each}}
   ];
 
-  // Read a single {{ entity.initUpperSg }}
+  /** Read a single {{ entity.initUpperSg }} */
   readOne(id: number) {
     return this.repo.findOne(id, { relations: this.alwaysRelate });
   }
 
-  // Read all {{ entity.initUpperPl }}
+  /** Read all {{ entity.initUpperPl }} */
   readAll() {
     return this.repo.find({ relations: this.alwaysRelate });
   }
@@ -57,14 +57,14 @@ export class {{ entity.initUpperSg }}Service extends BaseService<{{ entity.initU
   {{/if}}
 {{/each}}
 
-  // Update {{ entity.aOrAn }} {{ entity.initUpperSg }}.
+  /** Update {{ entity.aOrAn }} {{ entity.initUpperSg }}. */
   update(updateInput: {{ entity.initUpperSg }}UpdateInput) {
     return this.repo
     .preload(updateInput)
     .then(result => this.repo.save(result));
   }
 
-  // Delete {{ entity.aOrAn }} {{ entity.initUpperSg }}.
+  /** Delete {{ entity.aOrAn }} {{ entity.initUpperSg }}. */
   delete(id: number) {
     return this.repo.delete(id).then(result => result.affected);
   }
