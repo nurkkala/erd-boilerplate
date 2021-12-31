@@ -1,7 +1,6 @@
 import { plainToClass, Type } from "class-transformer";
 import Inflections from "./inflections";
 import { readFileSync } from "fs";
-import * as _ from "lodash";
 
 import Debug from "debug";
 const debug = Debug("boil");
@@ -149,7 +148,6 @@ class Attribute {
       case ScalarType.String:
       case ScalarType.Text:
       case ScalarType.Boolean:
-      case SpecialType.Date:
       case SpecialType.Time:
       case SpecialType.DateTime:
         // Decorator will infer type from TypeScript declaration
@@ -165,6 +163,12 @@ class Attribute {
       case ScalarType.Float:
         globalImports.add(ImportType.GraphQl, "Float");
         return "() => Float";
+      case SpecialType.Date:
+        globalImports.add(
+          ImportType.Statements,
+          "import { GraphQLDate } from '@/shared/date.graphql"
+        );
+        return "() => GraphQLDate";
       case SpecialType.Json:
         globalImports.add(
           ImportType.Statements,
